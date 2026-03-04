@@ -1,15 +1,19 @@
 {
   "name": "conference-app-backend",
   "version": "1.0.0",
-  "description": "API Backend para ConferenceApp",
+  "description": "API Backend para ConferenceApp - Producción",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
     "dev": "node --watch app.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^4.21.2",
+    "google-auth-library": "^9.14.0",
+    "googleapis": "^140.0.1",
     "jsonwebtoken": "^9.0.2"
   }
 }
