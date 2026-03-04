@@ -1,0 +1,303 @@
+openapi: 3.0.3
+info:
+  title: ConferenceApp API
+  version: 1.0.0
+  description: API Backend para la aplicación ConferenceApp generada en Stitch.
+servers:
+  - url: https://api.tudominio.com/v1
+    description: Servidor de Producción / Dev
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Meeting:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        status: { type: string, enum: [DRAFT, PROCESSING, READY, ERROR] }
+        created_at: { type: string, format: date-time }
+        minutes_id: { type: string }
+      required: [id, title, status, created_at]
+    ErrorResponse:
+      type: object
+      properties:
+        error_code: { type: string }
+        error_message: { type: string }
+        request_id: { type: string }
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  user: 
+                    type: object
+                    properties:
+                      id: { type: string }
+                      email: { type: string }
+                      name: { type: string }
+  /me:
+    get:
+      responses:
+        '200':
+          description: Datos del usuario actual
+  /meetings:
+    get:
+      responses:
+        '200':
+          description: Lista de reuniones
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Meeting'
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+      responses:
+        '200':
+          description: Reunión creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meeting'
+  /meetings/{id}:
+    get:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Detalle de reunión para polling
+  /meetings/{id}/audio:prepare-upload:
+    post:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Credenciales de subida
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  upload_url: { type: string }
+                  storage_key: { type: string }
+  /meetings/{id}/audio:complete:
+    post:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                storage_key: { type: string }
+                checksum_sha256: { type: string }
+                duration_sec: { type: number }
+                size_bytes: { type: number }
+                mime_type: { type: string }
+      responses:
+        '200':
+          description: Confirmación de subida
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  meeting_status: { type: string }
+  /meetings/{id}/audio:
+    delete:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+  /meetings/{id}/transcript:
+    get:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Transcripción
+  /meetings/{id}/speakers/{speaker_label}:
+    patch:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: speaker_label
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name: { type: string }
+      responses:
+        '200':
+          description: OK
+  /meetings/{id}/minutes:generate:
+    post:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                style: { type: string, enum: [neutral, formal] }
+      responses:
+        '200':
+          description: Acta generada o en proceso
+  /minutes/{minutes_id}:
+    get:
+      parameters:
+        - name: minutes_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Detalle del acta
+    patch:
+      parameters:
+        - name: minutes_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content_md: { type: string }
+      responses:
+        '200':
+          description: OK
+  /minutes/{minutes_id}/finalize:
+    post:
+      parameters:
+        - name: minutes_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Acta finalizada
+  /minutes/{minutes_id}/export:
+    post:
+      parameters:
+        - name: minutes_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: format
+          in: query
+          required: true
+          schema: { type: string, enum: [pdf, docx] }
+      responses:
+        '200':
+          description: Export iniciado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  export_id: { type: string }
+  /exports/{id}:
+    get:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Estado del export
+  /meetings/{id}/ai:query:
+    post:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                intent: { type: string, enum: [bullets, decisions, tasks, rewrite_minutes] }
+                minutes_id: { type: string }
+      responses:
+        '200':
+          description: Respuesta de IA
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result_md: { type: string }

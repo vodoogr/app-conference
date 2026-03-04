@@ -1,0 +1,15 @@
+{
+  "name": "conference-app-backend",
+  "version": "1.0.0",
+  "description": "API Backend para ConferenceApp",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node --watch app.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
