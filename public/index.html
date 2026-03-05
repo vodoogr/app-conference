@@ -206,8 +206,8 @@
         // ══════════════════════════════════════
         // CONFIG
         // ══════════════════════════════════════
-        // ⚠️ Cambia esta URL por la de tu Cloud Run cuando despliegues
-        const API_BASE = window.CONFERENCE_API_URL || 'http://localhost:3000/v1';
+        // URL del backend en Cloud Run (producción)
+        const API_BASE = window.CONFERENCE_API_URL || 'https://conferenceapp-api-355486498745.europe-west1.run.app/v1';
         let token = localStorage.getItem('conferenceapp_token');
         let currentUser = null;
         let currentMeetingId = null;
