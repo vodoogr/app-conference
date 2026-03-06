@@ -1,6 +1,10 @@
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
 require('dotenv').config();
+
+// Multer: almacenar en memoria (max 50 MB)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 const { verifyToken, signToken } = require('./lib/middleware');
 const { getAuthUrl, getTokensFromCode, getGoogleUserInfo } = require('./lib/google-auth');
@@ -134,7 +138,7 @@ v1.post('/meetings/:id/audio:prepare-upload', verifyToken, async (req, res) => {
   });
 });
 
-v1.post('/meetings/:id/audio:complete', verifyToken, async (req, res) => {
+v1.post('/meetings/:id/audio:complete', verifyToken, upload.single('audio'), async (req, res) => {
   try {
     const user = await db.getUserById(req.user.userId);
     if (!user || !user.google_refresh_token) {
@@ -144,15 +148,23 @@ v1.post('/meetings/:id/audio:complete', verifyToken, async (req, res) => {
     const meeting = await db.getMeetingById(req.params.id);
     if (!meeting) return res.status(404).json({ error_code: 'NOT_FOUND', error_message: 'Reunión no encontrada' });
 
+    // Obtener el buffer del archivo subido (multer) o del body base64 (fallback)
+    let audioBuffer;
+    let mimeType = 'audio/webm';
+    if (req.file) {
+      audioBuffer = req.file.buffer;
+      mimeType = req.file.mimetype || 'audio/webm';
+    } else if (req.body.audio) {
+      audioBuffer = Buffer.from(req.body.audio, 'base64');
+    } else {
+      return res.status(400).json({ error_code: 'BAD_REQUEST', error_message: 'No se proporcionó archivo de audio' });
+    }
+
     // Asegurar que las carpetas existan
     const folders = await initDriveFolders(user.google_refresh_token);
     const fileName = `${meeting.title.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '_')}.webm`;
 
-    // Si hay un buffer de audio en el body (simplificado para demo)
-    // En producción se usaría multer para manejar multipart upload
-    const audioBuffer = req.body.audio ? Buffer.from(req.body.audio, 'base64') : Buffer.from('audio-placeholder');
-
-    const result = await uploadAudio(user.google_refresh_token, audioBuffer, fileName, 'audio/webm', folders.audiosFolderId);
+    const result = await uploadAudio(user.google_refresh_token, audioBuffer, fileName, mimeType, folders.audiosFolderId);
 
     await db.updateMeeting(req.params.id, {
       audio_drive_file_id: result.fileId,

@@ -78,6 +78,65 @@
         .google-btn:hover {
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
         }
+
+        /* Recording animations */
+        .rec-pulse {
+            animation: recPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes recPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+            }
+
+            50% {
+                transform: scale(1.08);
+                box-shadow: 0 0 0 18px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .wave-bar {
+            display: inline-block;
+            width: 4px;
+            border-radius: 2px;
+            background: currentColor;
+            animation: waveAnim 0.8s ease-in-out infinite;
+        }
+
+        .wave-bar:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .wave-bar:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        .wave-bar:nth-child(4) {
+            animation-delay: 0.3s;
+        }
+
+        .wave-bar:nth-child(5) {
+            animation-delay: 0.15s;
+        }
+
+        @keyframes waveAnim {
+
+            0%,
+            100% {
+                height: 8px;
+            }
+
+            50% {
+                height: 24px;
+            }
+        }
+
+        .upload-progress {
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
 
@@ -138,6 +197,65 @@
             </div>
             <main id="meetings-list" class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
                 <div class="text-center text-slate-400 text-sm mt-10">Cargando reuniones...</div>
+            </main>
+        </div>
+
+        <!-- ═══ RECORDING SCREEN ═══ -->
+        <div id="screen-recording" class="flex-1 flex-col hidden">
+            <header class="flex items-center p-4 justify-between border-b border-slate-100 dark:border-slate-800">
+                <button id="btn-back-rec"
+                    class="flex size-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+                    <span class="material-symbols-outlined">arrow_back_ios</span>
+                </button>
+                <h1 class="text-lg font-bold tracking-tight" id="rec-meeting-title">Reunión</h1>
+                <div class="size-10"></div>
+            </header>
+            <main class="flex-1 flex flex-col items-center justify-center gap-6 px-8">
+                <!-- Status -->
+                <div id="rec-status" class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-slate-400">mic</span>
+                    <span class="text-sm text-slate-500">Pulsa para grabar</span>
+                </div>
+                <!-- Timer -->
+                <div id="rec-timer" class="text-5xl font-bold tracking-tight tabular-nums text-slate-300">00:00</div>
+                <!-- Waveform -->
+                <div id="rec-wave" class="flex items-center justify-center gap-1 h-8 text-slate-300"
+                    style="display:none">
+                    <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
+                    <span class="wave-bar"></span><span class="wave-bar"></span>
+                </div>
+                <!-- Record Button -->
+                <button id="btn-record"
+                    class="size-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-all mt-4">
+                    <span class="material-symbols-outlined text-[36px]" id="rec-icon">mic</span>
+                </button>
+                <p id="rec-hint" class="text-xs text-slate-400">Pulsa para empezar a grabar</p>
+                <!-- Upload section (hidden until recording done) -->
+                <div id="rec-upload-section" class="w-full space-y-3 mt-4" style="display:none">
+                    <div class="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-950 rounded-xl">
+                        <span class="material-symbols-outlined text-emerald-600">check_circle</span>
+                        <div>
+                            <p class="text-sm font-medium text-emerald-700">Audio grabado</p>
+                            <p id="rec-duration-info" class="text-xs text-emerald-500"></p>
+                        </div>
+                    </div>
+                    <button id="btn-upload-audio"
+                        class="w-full bg-primary text-white font-semibold text-sm py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">cloud_upload</span>
+                        Subir audio a Drive
+                    </button>
+                    <button id="btn-re-record"
+                        class="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-sm py-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">restart_alt</span>
+                        Grabar de nuevo
+                    </button>
+                    <!-- Progress bar -->
+                    <div id="upload-progress-bar" class="w-full bg-slate-200 rounded-full h-2 overflow-hidden"
+                        style="display:none">
+                        <div id="upload-progress-fill" class="upload-progress bg-primary h-full rounded-full"
+                            style="width:0%"></div>
+                    </div>
+                </div>
             </main>
         </div>
 
@@ -315,15 +433,162 @@
             if (!title) return;
 
             try {
-                await fetch(`${API_BASE}/meetings`, {
+                const res = await fetch(`${API_BASE}/meetings`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title })
                 });
-                loadMeetings();
+                const meeting = await res.json();
+                openRecording(meeting.id, title);
             } catch (err) {
                 alert('Error creando reunión: ' + err.message);
             }
+        });
+
+        // ══════════════════════════════════════
+        // RECORDING
+        // ══════════════════════════════════════
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordedBlob = null;
+        let recInterval = null;
+        let recStartTime = 0;
+        let recMeetingId = null;
+
+        function openRecording(meetingId, title) {
+            recMeetingId = meetingId;
+            currentMeetingId = meetingId;
+            document.getElementById('rec-meeting-title').textContent = title;
+            resetRecordingUI();
+            showScreen('recording');
+        }
+
+        function resetRecordingUI() {
+            recordedBlob = null;
+            audioChunks = [];
+            document.getElementById('rec-timer').textContent = '00:00';
+            document.getElementById('rec-timer').className = 'text-5xl font-bold tracking-tight tabular-nums text-slate-300';
+            document.getElementById('rec-status').innerHTML = '<span class="material-symbols-outlined text-slate-400">mic</span><span class="text-sm text-slate-500">Pulsa para grabar</span>';
+            document.getElementById('rec-icon').textContent = 'mic';
+            document.getElementById('btn-record').className = 'size-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-all mt-4';
+            document.getElementById('rec-wave').style.display = 'none';
+            document.getElementById('rec-upload-section').style.display = 'none';
+            document.getElementById('rec-hint').textContent = 'Pulsa para empezar a grabar';
+            document.getElementById('upload-progress-bar').style.display = 'none';
+            document.getElementById('upload-progress-fill').style.width = '0%';
+        }
+
+        function updateRecTimer() {
+            const elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+            const min = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const sec = String(elapsed % 60).padStart(2, '0');
+            document.getElementById('rec-timer').textContent = `${min}:${sec}`;
+        }
+
+        document.getElementById('btn-record').addEventListener('click', async () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                // STOP recording
+                mediaRecorder.stop();
+                clearInterval(recInterval);
+                document.getElementById('rec-status').innerHTML = '<span class="material-symbols-outlined text-emerald-500">check_circle</span><span class="text-sm text-emerald-600">Grabación completada</span>';
+                document.getElementById('rec-icon').textContent = 'mic';
+                document.getElementById('btn-record').className = 'size-20 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center shadow-lg transition-all mt-4';
+                document.getElementById('rec-wave').style.display = 'none';
+                document.getElementById('rec-hint').textContent = '';
+                return;
+            }
+
+            // START recording
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+
+                mediaRecorder.onstop = () => {
+                    recordedBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    stream.getTracks().forEach(t => t.stop());
+
+                    const elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+                    const min = Math.floor(elapsed / 60);
+                    const sec = elapsed % 60;
+                    document.getElementById('rec-duration-info').textContent = `Duración: ${min}m ${sec}s — ${(recordedBlob.size / 1024 / 1024).toFixed(1)} MB`;
+                    document.getElementById('rec-upload-section').style.display = 'block';
+                };
+
+                mediaRecorder.start(1000);
+                recStartTime = Date.now();
+                recInterval = setInterval(updateRecTimer, 1000);
+
+                document.getElementById('rec-timer').className = 'text-5xl font-bold tracking-tight tabular-nums text-red-500';
+                document.getElementById('rec-status').innerHTML = '<span class="size-3 rounded-full bg-red-500 rec-pulse"></span><span class="text-sm font-medium text-red-500">Grabando...</span>';
+                document.getElementById('rec-icon').textContent = 'stop';
+                document.getElementById('btn-record').className = 'size-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-all mt-4 rec-pulse';
+                document.getElementById('rec-wave').style.display = 'flex';
+                document.getElementById('rec-wave').className = 'flex items-center justify-center gap-1 h-8 text-red-400';
+                document.getElementById('rec-hint').textContent = 'Pulsa para detener';
+            } catch (err) {
+                alert('No se pudo acceder al micrófono: ' + err.message);
+            }
+        });
+
+        // Re-record
+        document.getElementById('btn-re-record').addEventListener('click', () => {
+            resetRecordingUI();
+        });
+
+        // Upload audio
+        document.getElementById('btn-upload-audio').addEventListener('click', async () => {
+            if (!recordedBlob || !recMeetingId) return;
+
+            const btn = document.getElementById('btn-upload-audio');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">progress_activity</span> Subiendo...';
+            document.getElementById('upload-progress-bar').style.display = 'block';
+            document.getElementById('upload-progress-fill').style.width = '30%';
+
+            try {
+                const formData = new FormData();
+                formData.append('audio', recordedBlob, 'recording.webm');
+
+                document.getElementById('upload-progress-fill').style.width = '60%';
+
+                const res = await fetch(`${API_BASE}/meetings/${recMeetingId}/audio:complete`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                document.getElementById('upload-progress-fill').style.width = '100%';
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error_message || 'Error subiendo audio');
+                }
+
+                btn.innerHTML = '<span class="material-symbols-outlined text-[20px]">check</span> ¡Subido!';
+                btn.className = btn.className.replace('bg-primary', 'bg-emerald-500');
+
+                setTimeout(() => {
+                    showScreen('meetings');
+                    loadMeetings();
+                }, 1500);
+            } catch (err) {
+                alert('Error subiendo audio: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined text-[20px]">cloud_upload</span> Reintentar subida';
+            }
+        });
+
+        // Back from recording
+        document.getElementById('btn-back-rec').addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                clearInterval(recInterval);
+            }
+            showScreen('meetings');
+            loadMeetings();
         });
 
         // ══════════════════════════════════════
@@ -331,11 +596,19 @@
         // ══════════════════════════════════════
         async function openMeeting(meetingId) {
             currentMeetingId = meetingId;
-            showScreen('transcript');
 
             try {
                 const meetRes = await fetch(`${API_BASE}/meetings/${meetingId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const meeting = await meetRes.json();
+
+                // Si la reunión aún no tiene audio, ir a pantalla de grabación
+                if (meeting.status === 'DRAFT' && !meeting.audio_drive_file_id) {
+                    openRecording(meetingId, meeting.title);
+                    return;
+                }
+
+                // Si ya tiene audio, mostrar transcripción
+                showScreen('transcript');
                 document.getElementById('meeting-title').textContent = meeting.title;
 
                 const transRes = await fetch(`${API_BASE}/meetings/${meetingId}/transcript`, { headers: { 'Authorization': `Bearer ${token}` } });
