@@ -1,22 +1,20 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="light">
 
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport" />
     <title>ConferenceApp - Voice Minutes</title>
-    <meta name="description" content="Graba, transcribe y genera actas de tus reuniones automáticamente." />
-    <meta name="theme-color" content="#195de6" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" href="/icons/icon-192.png" />
-    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <!-- Google Material Symbols -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
-    <script>
+
+    <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
             theme: {
@@ -25,8 +23,14 @@
                         "primary": "#195de6",
                         "background-light": "#f6f6f8",
                         "background-dark": "#111621",
+                        "status-red": "#ef4444",
+                        "status-orange": "#f97316",
+                        "status-green": "#22c55e",
+                        "status-gray": "#94a3b8",
                     },
-                    fontFamily: { "display": ["Inter"] },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
                     borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
                 },
             },
@@ -39,44 +43,29 @@
             min-height: 100dvh;
         }
 
-        .ios-blur {
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+        .screen {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            min-height: 100vh;
         }
 
-        .fade-in {
-            animation: fadeIn 0.3s ease-in;
+        .screen.active {
+            display: flex;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(8px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .google-btn {
-            background: #fff;
-            border: 1px solid #dadce0;
-            border-radius: 20px;
-            padding: 10px 24px;
-            font-size: 14px;
-            font-weight: 500;
-            color: #3c4043;
-            cursor: pointer;
+        .waveform-container {
             display: flex;
             align-items: center;
-            gap: 10px;
-            transition: box-shadow 0.2s;
+            gap: 4px;
+            height: 40px;
         }
 
-        .google-btn:hover {
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+        .waveform-bar {
+            width: 4px;
+            background-color: #195de6;
+            border-radius: 2px;
         }
 
         /* Recording animations */
@@ -94,359 +83,1116 @@
 
             50% {
                 transform: scale(1.08);
-                box-shadow: 0 0 0 18px rgba(239, 68, 68, 0);
+                box-shadow: 0 0 20px 5px rgba(239, 68, 68, 0.4);
             }
         }
 
-        .wave-bar {
-            display: inline-block;
-            width: 4px;
-            border-radius: 2px;
-            background: currentColor;
-            animation: waveAnim 0.8s ease-in-out infinite;
+        .ios-shadow {
+            box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.05);
         }
 
-        .wave-bar:nth-child(2) {
-            animation-delay: 0.1s;
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
 
-        .wave-bar:nth-child(3) {
-            animation-delay: 0.2s;
+        .fill-1 {
+            font-variation-settings: 'FILL' 1;
         }
 
-        .wave-bar:nth-child(4) {
-            animation-delay: 0.3s;
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
         }
 
-        .wave-bar:nth-child(5) {
-            animation-delay: 0.15s;
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
-        @keyframes waveAnim {
-
-            0%,
-            100% {
-                height: 8px;
-            }
-
-            50% {
-                height: 24px;
-            }
+        .ai-glow {
+            box-shadow: 0 0 20px rgba(25, 93, 230, 0.3);
         }
 
-        .upload-progress {
-            transition: width 0.3s ease;
+        /* iPhone SafeArea classes */
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        .pt-safe {
+            padding-top: env(safe-area-inset-top, 20px);
         }
     </style>
 </head>
 
-<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+<body
+    class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display transition-colors duration-300">
+    <!-- Main App Container (Mobile size restriction for desktop preview) -->
     <div
-        class="relative mx-auto min-h-screen max-w-[430px] bg-white dark:bg-slate-950 flex flex-col shadow-2xl overflow-hidden border-x border-slate-200 dark:border-slate-800">
+        class="relative mx-auto min-h-screen max-w-md w-full bg-background-light dark:bg-background-dark flex flex-col shadow-2xl overflow-x-hidden border-x border-slate-200 dark:border-slate-800">
 
-        <!-- Status Bar -->
-        <div class="h-12 w-full flex justify-between items-center px-8 pt-4">
-            <span class="text-sm font-semibold" id="clock">--:--</span>
-            <div class="flex gap-1.5 items-center">
-                <span class="material-symbols-outlined text-[18px]">signal_cellular_4_bar</span>
-                <span class="material-symbols-outlined text-[18px]">wifi</span>
-                <span class="material-symbols-outlined text-[18px]">battery_full</span>
+        <!-- ========================================== -->
+        <!-- SCREEN: SPLASH / LOGIN                     -->
+        <!-- ========================================== -->
+        <div id="screen-login"
+            class="screen active relative flex min-h-screen w-full flex-col items-center justify-between pb-10">
+            <div class="h-20 w-full"></div>
+            <!-- Central Branding Section -->
+            <div class="flex flex-col items-center justify-center space-y-8 animate-fade-in z-10 w-full px-8">
+                <!-- Stylized Microphone/Waveform Logo -->
+                <div class="relative flex items-center justify-center w-24 h-24 bg-primary/10 rounded-full mb-4">
+                    <div class="absolute inset-0 bg-primary/5 rounded-full blur-xl"></div>
+                    <div class="waveform-container relative z-10">
+                        <div class="waveform-bar h-4"></div>
+                        <div class="waveform-bar h-8"></div>
+                        <div class="waveform-bar h-12"></div>
+                        <div class="waveform-bar h-10"></div>
+                        <div class="waveform-bar h-14 bg-primary"></div>
+                        <div class="waveform-bar h-10"></div>
+                        <div class="waveform-bar h-12"></div>
+                        <div class="waveform-bar h-8"></div>
+                        <div class="waveform-bar h-4"></div>
+                    </div>
+                </div>
+                <!-- Application Name -->
+                <div class="text-center">
+                    <h1 class="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">Voice Minutes</h1>
+                    <p
+                        class="mt-2 text-slate-500 dark:text-slate-400 font-medium uppercase tracking-[0.2em] text-[10px]">
+                        Transcription & Insights</p>
+                </div>
+
+                <!-- LOGIN BUTTON -->
+                <div id="login-container" class="w-full mt-12" style="display: none;">
+                    <button id="btn-login-google"
+                        class="w-full flex items-center justify-center gap-3 bg-white dark:bg-white text-slate-700 font-semibold py-4 px-6 rounded-xl shadow-lg border border-slate-200 hover:shadow-xl transition-all">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24">
+                            <path fill="#4285F4"
+                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                            <path fill="#34A853"
+                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="#FBBC05"
+                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                            <path fill="#EA4335"
+                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                        </svg>
+                        Acceder con Google
+                    </button>
+                    <p class="text-center text-[10px] text-slate-400 mt-4 px-4 font-medium leading-relaxed">Al entrar,
+                        aceptas permitir guardar audios y conectar con tu Google Drive.</p>
+                </div>
             </div>
-        </div>
 
-        <!-- ═══ LOGIN SCREEN ═══ -->
-        <div id="screen-login" class="flex-1 flex flex-col items-center justify-center px-8 gap-6">
-            <img src="/icons/icon-192.png" class="w-20 h-20 rounded-2xl shadow-lg" alt="ConferenceApp" />
-            <h1 class="text-2xl font-bold tracking-tight">ConferenceApp</h1>
-            <p class="text-sm text-slate-500 text-center">Graba, transcribe y genera actas de tus reuniones
-                automáticamente.</p>
-            <button id="btn-google-login" class="google-btn mt-4">
-                <svg width="18" height="18" viewBox="0 0 18 18">
-                    <path fill="#4285F4"
-                        d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.49h4.84a4.14 4.14 0 0 1-1.8 2.71v2.26h2.92a8.78 8.78 0 0 0 2.68-6.62z" />
-                    <path fill="#34A853"
-                        d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.83.86-3.04.86-2.34 0-4.33-1.58-5.04-3.71H.96v2.33A8.99 8.99 0 0 0 9 18z" />
-                    <path fill="#FBBC05"
-                        d="M3.96 10.71A5.41 5.41 0 0 1 3.64 9c0-.59.1-1.17.28-1.71V4.96H.96A8.99 8.99 0 0 0 0 9c0 1.45.35 2.82.96 4.04l3-2.33z" />
-                    <path fill="#EA4335"
-                        d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A8.99 8.99 0 0 0 .96 4.96l3 2.33C4.67 5.16 6.66 3.58 9 3.58z" />
-                </svg>
-                Iniciar sesión con Google
-            </button>
-            <p class="text-[11px] text-slate-400 text-center mt-2">Al iniciar sesión, permitirás que ConferenceApp
-                guarde audios y actas en tu Google Drive.</p>
-        </div>
-
-        <!-- ═══ MEETINGS LIST SCREEN ═══ -->
-        <div id="screen-meetings" class="flex-1 flex-col hidden">
-            <header class="flex items-center p-4 justify-between border-b border-slate-100 dark:border-slate-800">
-                <div class="flex items-center gap-3">
-                    <div class="size-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold"
-                        id="user-avatar">U</div>
-                    <h1 class="text-lg font-bold tracking-tight">Mis Reuniones</h1>
-                </div>
-                <button id="btn-logout" class="text-xs text-slate-400 hover:text-red-500 transition-colors">Cerrar
-                    sesión</button>
-            </header>
-            <div class="px-4 pt-4">
-                <button id="btn-new-meeting"
-                    class="w-full bg-primary text-white font-semibold text-sm py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-[20px]">add</span>
-                    Nueva Reunión
-                </button>
-            </div>
-            <main id="meetings-list" class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-                <div class="text-center text-slate-400 text-sm mt-10">Cargando reuniones...</div>
-            </main>
-        </div>
-
-        <!-- ═══ RECORDING SCREEN ═══ -->
-        <div id="screen-recording" class="flex-1 flex-col hidden">
-            <header class="flex items-center p-4 justify-between border-b border-slate-100 dark:border-slate-800">
-                <button id="btn-back-rec"
-                    class="flex size-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
-                    <span class="material-symbols-outlined">arrow_back_ios</span>
-                </button>
-                <h1 class="text-lg font-bold tracking-tight" id="rec-meeting-title">Reunión</h1>
-                <div class="size-10"></div>
-            </header>
-            <main class="flex-1 flex flex-col items-center justify-center gap-6 px-8">
-                <!-- Status -->
-                <div id="rec-status" class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-slate-400">mic</span>
-                    <span class="text-sm text-slate-500">Pulsa para grabar</span>
-                </div>
-                <!-- Timer -->
-                <div id="rec-timer" class="text-5xl font-bold tracking-tight tabular-nums text-slate-300">00:00</div>
-                <!-- Waveform -->
-                <div id="rec-wave" class="flex items-center justify-center gap-1 h-8 text-slate-300"
-                    style="display:none">
-                    <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
-                    <span class="wave-bar"></span><span class="wave-bar"></span>
-                </div>
-                <!-- Record Button -->
-                <button id="btn-record"
-                    class="size-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-all mt-4">
-                    <span class="material-symbols-outlined text-[36px]" id="rec-icon">mic</span>
-                </button>
-                <p id="rec-hint" class="text-xs text-slate-400">Pulsa para empezar a grabar</p>
-                <!-- Upload section (hidden until recording done) -->
-                <div id="rec-upload-section" class="w-full space-y-3 mt-4" style="display:none">
-                    <div class="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-950 rounded-xl">
-                        <span class="material-symbols-outlined text-emerald-600">check_circle</span>
-                        <div>
-                            <p class="text-sm font-medium text-emerald-700">Audio grabado</p>
-                            <p id="rec-duration-info" class="text-xs text-emerald-500"></p>
+            <!-- Pre-loader Progress (shown while checking auth) -->
+            <div id="splash-loading" class="w-full max-w-sm px-8 space-y-8 z-10 w-full">
+                <div class="flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                        <p
+                            class="text-slate-600 dark:text-slate-300 text-sm font-medium leading-normal flex items-center gap-2">
+                            <span class="relative flex h-2 w-2">
+                                <span
+                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                            </span>
+                            Conectando con el servidor...
+                        </p>
+                    </div>
+                    <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                        <div
+                            class="h-full bg-primary rounded-full transition-all duration-[2000ms] w-2/3 animate-pulse">
                         </div>
                     </div>
+                </div>
+                <div class="text-center">
+                    <p class="text-slate-400 dark:text-slate-500 text-[10px] font-medium uppercase tracking-widest">
+                        Versión 1.0.0-beta | Antigravity Team
+                    </p>
+                </div>
+            </div>
+
+            <!-- Background abstract elements -->
+            <div class="absolute -top-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-[80px]"></div>
+            <div class="absolute -bottom-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-[100px]"></div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SCREEN: MEETINGS LIST                      -->
+        <!-- ========================================== -->
+        <div id="screen-meetings" class="screen">
+            <!-- Header -->
+            <header
+                class="sticky top-0 z-20 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 pt-safe flex items-center justify-between pb-4">
+                <div class="flex items-center gap-2 mt-4 text-slate-900 dark:text-slate-100">
+                    <span class="material-symbols-outlined text-primary text-2xl">mic_none</span>
+                    <h1 class="text-xl font-bold tracking-tight">Voice Minutes</h1>
+                </div>
+                <button id="btn-user-profile"
+                    class="p-2 mt-4 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <img id="user-avatar" src="https://ui-avatars.com/api/?name=U&background=195de6&color=fff"
+                        class="size-8 rounded-full border border-slate-200 dark:border-slate-700" alt="Avatar" />
+                </button>
+            </header>
+
+            <!-- Tabs Section -->
+            <div class="bg-white dark:bg-background-dark px-4 pt-2">
+                <div class="flex border-b border-slate-100 dark:border-slate-800 gap-6">
+                    <a class="flex flex-col items-center justify-center border-b-2 border-primary text-primary pb-3 pt-2"
+                        href="#">
+                        <p class="text-sm font-bold">Todas</p>
+                    </a>
+                    <a class="flex flex-col items-center justify-center border-b-2 border-transparent text-slate-500 dark:text-slate-400 pb-3 pt-2"
+                        href="#">
+                        <p class="text-sm font-medium">Borradores</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Meeting List Container -->
+            <main id="meetings-list" class="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 pb-32">
+                <div class="text-center text-slate-400 text-sm mt-10">Cargando reuniones...</div>
+            </main>
+
+            <!-- FAB: New Meeting -->
+            <button id="btn-create-meeting"
+                class="fixed bottom-24 right-6 size-14 bg-primary text-white rounded-full shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-30">
+                <span class="material-symbols-outlined text-3xl">add</span>
+            </button>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SCREEN: LIVE RECORDING                     -->
+        <!-- ========================================== -->
+        <div id="screen-recording"
+            class="screen bg-background-light dark:bg-slate-900 border-none pb-24 h-full relative z-20">
+            <!-- Header -->
+            <header
+                class="flex items-center p-4 justify-between pt-safe bg-white dark:bg-slate-900 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800">
+                <button id="btn-back-rec"
+                    class="text-slate-900 dark:text-slate-100 flex size-12 shrink-0 items-center justify-start rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <span class="material-symbols-outlined text-2xl font-bold">arrow_back_ios_new</span>
+                </button>
+                <h2
+                    class="text-slate-900 dark:text-slate-100 text-[17px] font-bold leading-tight flex-1 text-center pr-12 truncate tracking-tight">
+                    Grabadora en Vivo</h2>
+            </header>
+
+            <!-- Main Content -->
+            <main class="flex-1 flex flex-col items-center px-5 py-6 overflow-y-auto">
+                <!-- Recording Status Indicator -->
+                <div class="flex flex-col items-center gap-5 mt-2 mb-8">
+                    <div class="relative flex items-center justify-center w-32 h-32" id="rec-hero-mic">
+                        <div class="absolute inset-0 bg-red-500/10 rounded-full scale-[1.3] rec-pulse hidden"
+                            id="rec-hero-pulse"></div>
+                        <div class="absolute inset-2 bg-red-500/15 rounded-full scale-[1.1] rec-pulse hidden"
+                            id="rec-hero-pulse-2" style="animation-delay: 0.2s"></div>
+                        <div class="relative w-[72px] h-[72px] bg-slate-300 dark:bg-slate-800 text-slate-50 dark:text-slate-600 rounded-full flex items-center justify-center shadow-lg transition-colors z-10"
+                            id="rec-hero-circle">
+                            <span class="material-symbols-outlined text-3xl" id="rec-hero-icon"
+                                style="font-variation-settings: 'FILL' 1;">mic</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-center justify-center text-center">
+                        <h2 class="text-slate-900 dark:text-slate-100 text-[26px] font-bold leading-tight mb-1 tracking-tight"
+                            id="rec-status-text">Listo</h2>
+                        <p class="text-slate-500 dark:text-slate-400 text-[13px] font-medium tracking-tight"
+                            id="rec-meeting-title">Pulsa en grabar</p>
+                    </div>
+                </div>
+
+                <!-- Timer -->
+                <div class="flex w-full justify-center gap-4 mb-8">
+                    <div class="flex flex-col items-center gap-2">
+                        <div
+                            class="bg-white dark:bg-slate-800 rounded-[20px] w-20 h-20 flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700">
+                            <span class="text-3xl font-bold text-primary tabular-nums tracking-[-0.02em]"
+                                id="rec-hours">00</span>
+                        </div>
+                        <span class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.1em]">HORAS</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2">
+                        <div
+                            class="bg-white dark:bg-slate-800 rounded-[20px] w-20 h-20 flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700">
+                            <span class="text-3xl font-bold text-primary tabular-nums tracking-[-0.02em]"
+                                id="rec-minutes">00</span>
+                        </div>
+                        <span class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.1em]">MINUTOS</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2">
+                        <div
+                            class="bg-white dark:bg-slate-800 rounded-[20px] w-20 h-20 flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700">
+                            <span class="text-3xl font-bold text-primary tabular-nums tracking-[-0.02em]"
+                                id="rec-seconds">00</span>
+                        </div>
+                        <span class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.1em]">SEGUNDOS</span>
+                    </div>
+                </div>
+
+                <!-- Visualizer Box -->
+                <div
+                    class="w-full bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-100 dark:border-slate-700 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] mb-8 h-[160px] flex flex-col justify-between">
+                    <div class="flex items-center justify-between z-10">
+                        <p class="text-slate-800 dark:text-slate-200 text-sm font-bold tracking-tight">Nivel de Entrada
+                        </p>
+                        <span
+                            class="text-[9px] font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-full uppercase tracking-wider"
+                            id="rec-live-badge">Tiempo Real</span>
+                    </div>
+                    <!-- Actual waveform bars -->
+                    <div class="flex items-end justify-between h-[70px] gap-1 relative z-10 opacity-30 transition-opacity"
+                        id="rec-wave-bars">
+                        <div class="w-full bg-primary/30 rounded-t-full" style="height: 30%"></div>
+                        <div class="w-full bg-primary/40 rounded-t-full" style="height: 45%"></div>
+                        <div class="w-full bg-primary/60 rounded-t-full" style="height: 60%"></div>
+                        <div class="w-full bg-primary rounded-t-full" style="height: 90%"></div>
+                        <div class="w-full bg-primary/80 rounded-t-full" style="height: 70%"></div>
+                        <div class="w-full bg-primary/60 rounded-t-full" style="height: 40%"></div>
+                        <div class="w-full bg-primary/30 rounded-t-full" style="height: 25%"></div>
+                        <div class="w-full bg-primary/50 rounded-t-full" style="height: 40%"></div>
+                        <div class="w-full bg-primary/70 rounded-t-full" style="height: 65%"></div>
+                        <div class="w-full bg-primary/90 rounded-t-full" style="height: 85%"></div>
+                        <div class="w-full bg-primary/60 rounded-t-full" style="height: 50%"></div>
+                        <div class="w-full bg-primary/30 rounded-t-full" style="height: 35%"></div>
+                        <div class="w-full bg-primary/20 rounded-t-full" style="height: 20%"></div>
+                        <div class="w-full bg-primary/50 rounded-t-full" style="height: 60%"></div>
+                        <div class="w-full bg-primary rounded-t-full" style="height: 100%"></div>
+                        <div class="w-full bg-primary/60 rounded-t-full" style="height: 55%"></div>
+                        <div class="w-full bg-primary/40 rounded-t-full" style="height: 35%"></div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex gap-4 w-full h-[100px]" id="rec-controls-active">
+                    <button id="btn-pause-record"
+                        class="flex-1 flex flex-col items-center justify-center gap-2 rounded-3xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold active:scale-95 transition-all outline-none">
+                        <div
+                            class="w-7 h-7 rounded-full bg-slate-700 dark:bg-slate-400 text-white dark:text-slate-900 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[14px]"
+                                style="font-variation-settings: 'FILL' 1;">pause</span>
+                        </div>
+                        <span class="text-[13px]">Pausar</span>
+                    </button>
+                    <button id="btn-record-main"
+                        class="flex-1 flex flex-col items-center justify-center gap-2 rounded-3xl bg-red-500 text-white font-bold shadow-lg shadow-red-500/20 hover:bg-red-600 active:scale-95 transition-all border-none outline-none">
+                        <div class="w-7 h-7 rounded-full bg-white text-red-500 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[14px]"
+                                style="font-variation-settings: 'FILL' 1;">stop</span>
+                        </div>
+                        <span class="text-[13px]">Detener</span>
+                    </button>
+                </div>
+
+                <!-- Finished Controls (Upload) -->
+                <div class="flex flex-col gap-3 w-full mt-4 hidden" id="rec-controls-finished">
+                    <div class="text-center mb-1">
+                        <p class="text-sm font-medium text-slate-500" id="rec-duration-info">Duración: -- — -- MB</p>
+                    </div>
                     <button id="btn-upload-audio"
-                        class="w-full bg-primary text-white font-semibold text-sm py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">cloud_upload</span>
-                        Subir audio a Drive
+                        class="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-primary text-white font-bold shadow-lg hover:opacity-90 active:scale-95 transition-all">
+                        <span class="material-symbols-outlined">cloud_upload</span>
+                        Procesar Acta Médica
                     </button>
                     <button id="btn-re-record"
-                        class="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-sm py-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">restart_alt</span>
-                        Grabar de nuevo
+                        class="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                        <span class="material-symbols-outlined">restart_alt</span>
+                        Descartar
                     </button>
-                    <!-- Progress bar -->
-                    <div id="upload-progress-bar" class="w-full bg-slate-200 rounded-full h-2 overflow-hidden"
-                        style="display:none">
-                        <div id="upload-progress-fill" class="upload-progress bg-primary h-full rounded-full"
-                            style="width:0%"></div>
+                </div>
+
+            </main>
+        </div>
+
+        <div id="screen-processing"
+            class="screen bg-white dark:bg-slate-950 flex flex-col items-center pb-24 h-full relative z-20">
+            <!-- Header -->
+            <div
+                class="flex items-center p-4 justify-between pt-safe bg-white dark:bg-slate-900 sticky top-0 z-10 w-full">
+                <button
+                    class="text-slate-900 dark:text-slate-100 flex size-12 shrink-0 items-center justify-start rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onclick="showScreen('recording')">
+                    <span class="material-symbols-outlined text-2xl font-bold">arrow_back_ios_new</span>
+                </button>
+                <h2
+                    class="text-slate-900 dark:text-slate-100 text-[17px] font-bold leading-tight flex-1 text-center pr-12 tracking-tight">
+                    Procesando Reunión</h2>
+            </div>
+
+            <main class="flex-1 w-full flex flex-col items-center px-6 py-8 overflow-y-auto">
+                <!-- Circular Progress -->
+                <div class="relative flex items-center justify-center mb-8 mt-4">
+                    <svg class="w-32 h-32 transform -rotate-90">
+                        <circle cx="64" cy="64" r="60" stroke="currentColor" stroke-width="4" fill="transparent"
+                            class="text-slate-100 dark:text-slate-800" />
+                        <circle id="upload-progress-circle" cx="64" cy="64" r="60" stroke="currentColor"
+                            stroke-width="4" fill="transparent" stroke-dasharray="377" stroke-dashoffset="377"
+                            class="text-primary transition-all duration-500 ease-out" />
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-3xl font-bold text-primary tabular-nums tracking-tighter"
+                            id="upload-percent">0%</span>
+                    </div>
+                </div>
+
+                <div class="text-center mb-10 w-full">
+                    <h1 class="text-slate-900 dark:text-slate-100 text-[26px] font-bold tracking-tight mb-2"
+                        id="processing-title">Subiendo audio...</h1>
+                    <p class="text-slate-500 dark:text-slate-400 text-[13px] leading-relaxed px-4"
+                        id="processing-subtitle">Enviando el archivo a los servidores de Google para su análisis
+                        inicial.</p>
+                </div>
+
+                <!-- Timeline Steps -->
+                <div class="w-full max-w-sm flex flex-col gap-0 relative pl-4">
+                    <!-- Vertical Line -->
+                    <div
+                        class="absolute left-[31px] top-6 bottom-6 w-[2px] bg-slate-100 dark:bg-slate-800 rounded-full z-0">
+                    </div>
+
+                    <!-- Step 1 -->
+                    <div class="flex items-start gap-4 py-4 relative z-10 opacity-100 transition-opacity" id="step-1">
+                        <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md shadow-primary/20 shrink-0"
+                            id="step-1-icon">
+                            <span class="material-symbols-outlined text-[16px]">cloud_upload</span>
+                        </div>
+                        <div class="flex flex-col pt-1">
+                            <h3 class="text-slate-900 dark:text-slate-100 text-sm font-bold tracking-tight"
+                                id="step-1-title">Iniciando subida</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Enviando datos al servidor</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="flex items-start gap-4 py-4 relative z-10 opacity-50 transition-opacity" id="step-2">
+                        <div class="w-8 h-8 rounded-full bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 text-slate-400 flex items-center justify-center shrink-0"
+                            id="step-2-icon">
+                            <span class="material-symbols-outlined text-[16px]">graphic_eq</span>
+                        </div>
+                        <div class="flex flex-col pt-1">
+                            <h3 class="text-slate-900 dark:text-slate-100 text-sm font-bold tracking-tight">
+                                Transcribiendo audio</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5" id="step-2-subtitle">Pendiente
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="flex items-start gap-4 py-4 relative z-10 opacity-50 transition-opacity" id="step-3">
+                        <div class="w-8 h-8 rounded-full bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 text-slate-400 flex items-center justify-center shrink-0"
+                            id="step-3-icon">
+                            <span class="material-symbols-outlined text-[16px]">description</span>
+                        </div>
+                        <div class="flex flex-col pt-1">
+                            <h3 class="text-slate-900 dark:text-slate-100 text-sm font-bold tracking-tight">Generando
+                                acta</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5" id="step-3-subtitle">Pendiente
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="flex items-start gap-4 py-4 relative z-10 opacity-50 transition-opacity" id="step-4">
+                        <div class="w-8 h-8 rounded-full bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 text-slate-400 flex items-center justify-center shrink-0"
+                            id="step-4-icon">
+                            <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                        </div>
+                        <div class="flex flex-col pt-1">
+                            <h3 class="text-slate-900 dark:text-slate-100 text-sm font-bold tracking-tight">Exportación
+                                lista</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5" id="step-4-subtitle">Pendiente
+                            </p>
+                        </div>
                     </div>
                 </div>
             </main>
         </div>
 
-        <!-- ═══ TRANSCRIPT SCREEN ═══ -->
-        <div id="screen-transcript" class="flex-1 flex-col hidden">
-            <header class="flex items-center p-4 justify-between border-b border-slate-100 dark:border-slate-800">
-                <button id="btn-back"
-                    class="flex size-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
-                    <span class="material-symbols-outlined">arrow_back_ios</span>
-                </button>
-                <h1 class="text-lg font-bold tracking-tight" id="meeting-title">Reunión</h1>
-                <button
-                    class="flex size-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
-                    <span class="material-symbols-outlined text-primary">ios_share</span>
-                </button>
-            </header>
-            <div class="px-4 pt-4 pb-2">
-                <div class="relative group">
-                    <span
-                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
-                    <input id="search-input"
-                        class="w-full bg-slate-100 dark:bg-slate-900 border-none rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all outline-none"
-                        placeholder="Buscar en la transcripción..." type="text" />
+        <!-- ========================================== -->
+        <!-- SCREEN: MEETING DETAILS / MINUTES          -->
+        <!-- ========================================== -->
+        <div id="screen-meeting-detail" class="screen bg-white dark:bg-background-dark">
+            <div
+                class="sticky top-0 z-30 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 pt-safe">
+                <div class="flex items-center p-4 justify-between">
+                    <button
+                        class="btn-back text-slate-900 dark:text-slate-100 flex size-10 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <h2 class="text-slate-900 dark:text-slate-100 text-base font-bold leading-tight flex-1 text-center truncate px-2"
+                        id="detail-meeting-title">Acta de Reunión</h2>
+                    <div class="w-10"></div>
+                </div>
+                <!-- 4 Tabs -->
+                <div class="flex px-2 justify-between border-b border-slate-100 dark:border-slate-800">
+                    <button
+                        class="detail-tab flex flex-col items-center justify-center border-b-[3px] border-primary pb-3 pt-4 flex-1 text-primary"
+                        data-tab="acta">
+                        <p class="text-xs font-bold">Acta</p>
+                    </button>
+                    <button
+                        class="detail-tab flex flex-col items-center justify-center border-b-[3px] border-transparent text-slate-500 pb-3 pt-4 flex-1"
+                        data-tab="transcription">
+                        <p class="text-xs font-bold">Transcr</p>
+                    </button>
+                    <button
+                        class="detail-tab flex flex-col items-center justify-center border-b-[3px] border-transparent text-slate-500 pb-3 pt-4 flex-1"
+                        data-tab="speakers">
+                        <p class="text-xs font-bold">Speakrs</p>
+                    </button>
+                    <button
+                        class="detail-tab flex flex-col items-center justify-center border-b-[3px] border-transparent text-slate-500 pb-3 pt-4 flex-1"
+                        data-tab="export">
+                        <p class="text-xs font-bold">Exp.</p>
+                    </button>
                 </div>
             </div>
-            <nav class="flex px-4 border-b border-slate-100 dark:border-slate-800" id="tabs-nav">
-                <a class="tab-link flex-1 py-3 text-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
-                    data-tab="resumen" href="#">Resumen</a>
-                <a class="tab-link flex-1 py-3 text-center text-sm font-bold text-primary border-b-2 border-primary"
-                    data-tab="transcripcion" href="#">Transcripción</a>
-                <a class="tab-link flex-1 py-3 text-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
-                    data-tab="speakers" href="#">Speakers</a>
-            </nav>
-            <main class="flex-1 overflow-y-auto px-4 py-4 space-y-6" id="transcript-container">
-                <div class="text-center text-slate-500 text-sm mt-10">Cargando transcripción...</div>
+
+            <!-- Tab Content: Acta -->
+            <main id="tab-acta" class="flex-1 overflow-y-auto pb-40 px-4 pt-4 space-y-6 hidden">
+                <div
+                    class="flex flex-col items-start justify-between gap-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
+                    <div class="flex w-full justify-between items-center">
+                        <div class="flex flex-col gap-1">
+                            <span
+                                class="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-bold text-slate-600 dark:text-slate-300"
+                                id="detail-status-badge">
+                                ESTADO: --
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <!-- AI Generate Button (only if not generated) -->
+                <div id="btn-generate-acta-container" class="hidden">
+                    <button id="btn-generate-acta"
+                        class="w-full flex items-center justify-between p-4 bg-gradient-to-r from-primary to-blue-600 rounded-xl text-white shadow-lg ai-glow active:scale-95 transition-transform">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                            <div class="text-left">
+                                <p class="font-bold text-sm">Generar Acta con IA</p>
+                                <p class="text-[11px] opacity-80 leading-tight">Procesar el audio y extraer notas</p>
+                            </div>
+                        </div>
+                        <span class="material-symbols-outlined">chevron_right</span>
+                    </button>
+                </div>
+
+                <!-- Textarea: Content -->
+                <div id="acta-content-wrapper" class="hidden flex-col gap-3">
+                    <div class="relative group">
+                        <textarea id="acta-content"
+                            class="w-full min-h-[400px] rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-4 text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-primary focus:border-primary focus:bg-white dark:focus:bg-slate-900 resize-y leading-relaxed text-sm"
+                            placeholder="Contenido del acta..."></textarea>
+                    </div>
+                    <button id="btn-save-minutes"
+                        class="w-full py-4 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-lg">save</span> Guardar Cambios
+                    </button>
+                </div>
+            </main>
+
+            <!-- Tab Content: Transcripcion -->
+            <main id="tab-transcription" class="flex-1 overflow-y-auto pb-40 px-4 pt-4 space-y-4 hidden">
+                <div class="relative mb-4">
+                    <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                    <input id="transcription-search"
+                        class="w-full bg-slate-100 dark:bg-slate-800/80 border-none rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none text-slate-900 dark:text-slate-100"
+                        placeholder="Buscar en transcripción..." type="text" />
+                </div>
+                <div id="transcript-container" class="space-y-4">
+                    <div class="text-center text-slate-400 text-sm mt-10">Selecciona o genera una transcripción.</div>
+                </div>
+            </main>
+
+            <!-- Tab Content: Speakers (Próximamente real, UI mock) -->
+            <main id="tab-speakers" class="flex-1 overflow-y-auto pb-40 px-4 pt-6 hidden">
+                <div
+                    class="text-center border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-8 bg-slate-50 dark:bg-slate-800/20">
+                    <span class="material-symbols-outlined text-4xl text-slate-400 mb-2">groups</span>
+                    <h3 class="font-bold text-slate-700 dark:text-slate-300">Gestión de Hablantes</h3>
+                    <p class="text-xs text-slate-500 mt-2">Próximamente: Podrás renombrar a los participantes
+                        automáticamente detectados por la IA.</p>
+                </div>
+            </main>
+
+            <!-- Tab Content: Export -->
+            <main id="tab-export" class="flex-1 overflow-y-auto pb-40 px-4 pt-6 hidden space-y-4">
+                <button
+                    class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-primary text-slate-800 dark:text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-sm">
+                    <span class="material-symbols-outlined text-primary">picture_as_pdf</span>
+                    <span>Descargar PDF</span>
+                </button>
+                <div class="text-center mt-8">
+                    <p class="text-xs text-slate-400">Exportación impulsada por tu Google Drive.</p>
+                </div>
+            </main>
+
+
+            <!-- AI Floating Action Button -->
+            <div class="fixed bottom-24 right-6 z-50">
+                <button id="btn-toggle-ai"
+                    class="size-14 bg-primary rounded-full text-white shadow-2xl flex items-center justify-center ai-glow hover:scale-105 active:scale-95 transition-transform">
+                    <span class="material-symbols-outlined text-3xl"
+                        style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SCREEN: SETTINGS                           -->
+        <!-- ========================================== -->
+        <div id="screen-settings" class="screen bg-white dark:bg-background-dark">
+            <header
+                class="flex items-center p-4 border-b border-slate-100 dark:border-slate-800 justify-between pt-safe sticky top-0 bg-white/90 dark:bg-slate-900/90 z-10 w-full">
+                <button
+                    class="btn-back text-slate-900 dark:text-slate-100 flex size-10 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <span class="material-symbols-outlined text-2xl">arrow_back</span>
+                </button>
+                <h2 class="text-base font-bold flex-1 text-center pr-10">Ajustes</h2>
+            </header>
+            <main class="flex-1 px-4 py-8 space-y-6">
+                <!-- User Profile -->
+                <div
+                    class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <img id="settings-avatar" src="" class="size-14 rounded-full border-2 border-primary/20" alt="" />
+                    <div class="flex-1">
+                        <h3 class="font-bold text-slate-900 dark:text-white" id="settings-name">Usuario</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400" id="settings-email">email@google.com</p>
+                    </div>
+                </div>
+
+                <h4 class="text-xs font-bold uppercase tracking-widest text-slate-400 pl-2">Avanzado</h4>
+                <div
+                    class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 shadow-sm">
+                    <button onclick="showScreen('dev-settings')"
+                        class="w-full flex justify-between items-center p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-slate-400">code</span>
+                            <span class="text-sm font-medium">Ajustes de Desarrollador</span>
+                        </div>
+                        <span class="material-symbols-outlined text-slate-300">chevron_right</span>
+                    </button>
+                </div>
+
+                <div class="pt-8">
+                    <button id="btn-logout"
+                        class="w-full py-4 rounded-xl border border-red-500/20 bg-red-50 dark:bg-red-500/5 text-red-600 dark:text-red-400 font-bold hover:bg-red-100 dark:hover:bg-red-500/10 transition-colors flex justify-center items-center gap-2">
+                        <span class="material-symbols-outlined">logout</span> Cerrar Sesión
+                    </button>
+                </div>
+
+                <div class="text-center pt-8 pb-32">
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest">Voice Minutes Antigravity Team</p>
+                </div>
             </main>
         </div>
 
-        <!-- Bottom Tab Bar -->
-        <nav class="border-t border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 ios-blur flex justify-around pb-8 pt-3 mt-auto"
-            id="bottom-nav">
-            <a class="bottom-tab flex flex-col items-center gap-1 text-primary" data-screen="meetings" href="#">
-                <span class="material-symbols-outlined fill-1">mic</span><span
-                    class="text-[10px] font-medium">Reuniones</span>
-            </a>
-            <a class="bottom-tab flex flex-col items-center gap-1 text-slate-400" data-screen="transcript" href="#">
-                <span class="material-symbols-outlined">description</span><span
-                    class="text-[10px] font-medium">Transcripción</span>
-            </a>
-            <a class="bottom-tab flex flex-col items-center gap-1 text-slate-400" href="#">
-                <span class="material-symbols-outlined">calendar_today</span><span
-                    class="text-[10px] font-medium">Calendario</span>
-            </a>
-            <a class="bottom-tab flex flex-col items-center gap-1 text-slate-400" href="#">
-                <span class="material-symbols-outlined">settings</span><span
-                    class="text-[10px] font-medium">Ajustes</span>
-            </a>
+
+        <!-- Global Bottom Navigation -->
+        <nav id="global-bottom-nav"
+            class="fixed bottom-0 w-full max-w-md bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-6 py-2 pb-safe flex justify-between items-center z-[100] transition-transform duration-300 translate-y-[200%]">
+            <button
+                class="nav-btn flex flex-col items-center gap-1 w-16 text-slate-400 hover:text-primary transition-colors"
+                data-target="screen-meetings" id="nav-item-meetings">
+                <span class="material-symbols-outlined" id="nav-icon-meetings">home</span>
+                <span class="text-[10px] font-bold">Inicio</span>
+            </button>
+            <button
+                class="nav-btn flex flex-col items-center gap-1 w-16 text-slate-400 hover:text-primary transition-colors"
+                data-target="screen-recording" id="nav-item-recording">
+                <span class="material-symbols-outlined" id="nav-icon-recording">mic</span>
+                <span class="text-[10px] font-bold">Grabadora</span>
+            </button>
+            <button
+                class="nav-btn flex flex-col items-center gap-1 w-16 text-slate-400 hover:text-primary transition-colors cursor-not-allowed opacity-50">
+                <!-- Pestaña Actas a futuro -->
+                <span class="material-symbols-outlined" id="nav-icon-actas">description</span>
+                <span class="text-[10px] font-bold">Actas</span>
+            </button>
+            <button
+                class="nav-btn flex flex-col items-center gap-1 w-16 text-slate-400 hover:text-primary transition-colors"
+                data-target="screen-settings" id="nav-item-settings">
+                <span class="material-symbols-outlined" id="nav-icon-settings">settings</span>
+                <span class="text-[10px] font-bold">Ajustes</span>
+            </button>
         </nav>
 
-        <!-- iOS Home Indicator -->
-        <div class="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-slate-300 dark:bg-slate-700 rounded-full">
+    </div> <!-- End Main Container -->
+
+    <!-- ========================================== -->
+    <!-- SCREEN: EXPORT PREVIEW                     -->
+    <!-- ========================================== -->
+    <div id="screen-export-preview" class="screen bg-background-light dark:bg-background-dark hidden pb-40">
+        <!-- Top Navigation Bar -->
+        <div
+            class="flex items-center bg-white dark:bg-slate-900 p-4 pb-2 justify-between sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800 pt-safe">
+            <div class="text-slate-900 dark:text-slate-100 flex size-12 shrink-0 items-center cursor-pointer btn-back-modal"
+                data-target="screen-meeting-detail">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </div>
+            <h2
+                class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
+                Vista Previa de Exportación</h2>
+            <div class="flex w-12 items-center justify-end">
+                <button
+                    class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-slate-900 dark:text-slate-100 gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+                    <span class="material-symbols-outlined">more_horiz</span>
+                </button>
+            </div>
+        </div>
+        <!-- Format Selector -->
+        <div class="px-4 py-4">
+            <div class="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
+                <button
+                    class="flex-1 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-slate-700 shadow-sm text-primary">PDF</button>
+                <button
+                    class="flex-1 py-2 text-sm font-semibold rounded-lg text-slate-500 dark:text-slate-400">DOCX</button>
+            </div>
+        </div>
+        <!-- PDF Document Preview Area -->
+        <div class="p-4 flex-1">
+            <div
+                class="bg-white dark:bg-slate-900 shadow-xl rounded-xl min-h-[600px] overflow-hidden flex flex-col border border-slate-200 dark:border-slate-800">
+                <!-- Document Header -->
+                <div class="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="bg-primary/10 p-3 rounded-xl">
+                            <span class="material-symbols-outlined text-primary text-3xl">description</span>
+                        </div>
+                        <span class="text-[10px] font-bold tracking-widest uppercase text-slate-400">BORRADOR</span>
+                    </div>
+                    <h1 class="text-slate-900 dark:text-slate-100 text-2xl font-bold leading-tight tracking-tight mb-2"
+                        id="export-preview-title">Minuta de Reunión</h1>
+                    <div class="flex flex-col gap-1">
+                        <div class="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
+                            <span class="material-symbols-outlined text-xs">calendar_today</span>
+                            <p id="export-preview-date">Fecha</p>
+                        </div>
+                        <div class="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
+                            <span class="material-symbols-outlined text-xs">groups</span>
+                            <p>Equipo</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Document Content -->
+                <div class="p-6 space-y-6">
+                    <!-- Executive Summary -->
+                    <section>
+                        <h3
+                            class="text-slate-900 dark:text-slate-100 text-base font-bold leading-tight tracking-[-0.015em] border-l-4 border-primary pl-3 mb-3 uppercase tracking-wider text-xs">
+                            Resumen Ejecutivo</h3>
+                        <p class="text-slate-700 dark:text-slate-300 text-sm leading-relaxed"
+                            id="export-preview-summary">...</p>
+                    </section>
+                </div>
+                <!-- Document Footer -->
+                <div
+                    class="mt-auto p-6 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/30">
+                    <p class="text-[10px] text-slate-400 font-medium">Página 1 de 1</p>
+                    <p class="text-[10px] text-slate-400 font-medium">Generado por Voice Minutes</p>
+                </div>
+            </div>
+        </div>
+        <!-- Action Bottom Sheet -->
+        <div
+            class="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-t-3xl shadow-[0_-8px_30px_rgb(0,0,0,0.12)] px-6 py-6 space-y-4 z-20">
+            <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-4"></div>
+            <div class="flex flex-col gap-3">
+                <button
+                    class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                    <span class="material-symbols-outlined">download</span>
+                    <span>Descargar PDF</span>
+                </button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button
+                        class="bg-primary/10 text-primary font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                        <span class="material-symbols-outlined text-xl">share</span>
+                        <span>Compartir</span>
+                    </button>
+                    <button
+                        class="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors border border-slate-200 dark:border-slate-700">
+                        <span class="material-symbols-outlined text-xl">print</span>
+                        <span>Imprimir</span>
+                    </button>
+                </div>
+            </div>
+            <div class="h-4"></div> <!-- Home indicator safe area padding -->
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- SCREEN: AI ASSISTANT FULL SCREEN           -->
+    <!-- ========================================== -->
+    <div id="screen-ai-assistant" class="screen bg-white dark:bg-background-dark hidden pb-32">
+        <header
+            class="sticky top-0 z-10 flex items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md p-4 border-b border-slate-200 dark:border-slate-800 justify-between pt-safe">
+            <div class="flex items-center gap-3">
+                <button
+                    class="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 p-2 rounded-full transition-colors btn-back-modal"
+                    data-target="screen-meeting-detail">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div class="flex flex-col">
+                    <h2 class="text-lg font-bold leading-tight tracking-tight">Asistente IA</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate w-40"
+                        id="ai-assistant-header-title">Reunión actual</p>
+                </div>
+            </div>
+            <button
+                class="flex items-center justify-center p-2 rounded-full text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <span class="material-symbols-outlined">more_horiz</span>
+            </button>
+        </header>
+        <main class="flex-1 overflow-y-auto w-full">
+            <div class="px-4 pt-6">
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">
+                    Acciones rápidas</h3>
+                <div class="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                    <button
+                        class="ai-suggestion-btn flex shrink-0 items-center gap-2 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 px-4 py-2.5 hover:bg-primary/20 transition-colors">
+                        <span class="material-symbols-outlined text-primary text-[20px]">auto_awesome</span>
+                        <p class="text-primary text-sm font-semibold">Resumir</p>
+                    </button>
+                    <button
+                        class="ai-suggestion-btn flex shrink-0 items-center gap-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2.5 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        <span
+                            class="material-symbols-outlined text-slate-600 dark:text-slate-400 text-[20px]">calendar_today</span>
+                        <p class="text-slate-700 dark:text-slate-300 text-sm font-semibold">Extraer fechas</p>
+                    </button>
+                    <button
+                        class="ai-suggestion-btn flex shrink-0 items-center gap-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2.5 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        <span
+                            class="material-symbols-outlined text-slate-600 dark:text-slate-400 text-[20px]">checklist</span>
+                        <p class="text-slate-700 dark:text-slate-300 text-sm font-semibold">Tareas</p>
+                    </button>
+                </div>
+            </div>
+            <div class="px-4 mt-8 space-y-4" id="ai-chat-history">
+                <!-- Chat Bubbles -->
+            </div>
+        </main>
+        <!-- Footer floating input -->
+        <footer
+            class="fixed bottom-0 w-full bg-white dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-20">
+            <div class="p-4 flex items-end gap-2">
+                <div
+                    class="flex-1 bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3 flex items-center gap-2 focus-within:ring-2 ring-primary/30 transition-all">
+                    <textarea id="ai-input"
+                        class="bg-transparent border-none focus:ring-0 p-0 text-sm flex-1 text-slate-900 dark:text-slate-100 placeholder-slate-500 resize-none min-h-[20px]"
+                        placeholder="Pregunta algo sobre la reunión..." rows="1"></textarea>
+                    <button class="text-slate-400 hover:text-primary transition-colors">
+                        <span class="material-symbols-outlined">mic</span>
+                    </button>
+                </div>
+                <button id="btn-send-ai"
+                    class="bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-105 transition-transform active:scale-95">
+                    <span class="material-symbols-outlined">send</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- SCREEN: DEV SETTINGS                       -->
+    <!-- ========================================== -->
+    <div id="screen-dev-settings" class="screen bg-background-light dark:bg-background-dark hidden pb-24">
+        <header
+            class="sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md pt-safe">
+            <div class="flex items-center p-4 justify-between w-full">
+                <button
+                    class="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors btn-back-modal"
+                    data-target="screen-settings">
+                    <span class="material-symbols-outlined text-slate-700 dark:text-slate-300">arrow_back</span>
+                </button>
+                <h1 class="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">Ajustes de
+                    Desarrollador</h1>
+            </div>
+        </header>
+        <main class="flex-1 w-full pb-24">
+            <section class="p-4 space-y-6">
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-primary mb-3">Configuración de Red</h3>
+                    <div class="space-y-4">
+                        <label class="flex flex-col gap-2">
+                            <span class="text-sm font-medium text-slate-600 dark:text-slate-400">API Base URL</span>
+                            <div class="relative">
+                                <input
+                                    class="form-input block w-full rounded-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-3.5 font-mono text-sm focus:border-primary focus:ring-primary text-slate-900 dark:text-slate-100"
+                                    type="text" id="dev-api-url" value="" />
+                            </div>
+                        </label>
+                        <button
+                            class="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+                            onclick="localStorage.setItem('conference_api_base', document.getElementById('dev-api-url').value); alert('Guardado! Reinicia la app.');">
+                            <span class="material-symbols-outlined text-lg">save</span>
+                            Guardar API Override
+                        </button>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-slate-200 dark:border-slate-800">
+                    <button
+                        class="w-full flex items-center justify-between gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm font-semibold text-red-500 hover:bg-red-500/10 transition-colors"
+                        onclick="localStorage.clear(); alert('Local storage limpiado'); window.location.reload();">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-lg">delete_sweep</span>
+                            Purgar todo el Local Storage
+                        </div>
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Global Layout Wrapper Ends -->
+
     <script>
-        // ══════════════════════════════════════
-        // CONFIG
-        // ══════════════════════════════════════
-        // URL del backend en Cloud Run (producción)
-        const API_BASE = window.CONFERENCE_API_URL || 'https://conferenceapp-api-355486498745.europe-west1.run.app/v1';
-        let token = localStorage.getItem('conferenceapp_token');
+        const API_BASE = 'https://conferenceapp-api-355486498745.europe-west1.run.app/v1';
+        let token = localStorage.getItem('conference_token');
         let currentUser = null;
-        let currentMeetingId = null;
-
-        // ── Clock ──
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-        setInterval(updateClock, 30000);
-        updateClock();
 
         // ══════════════════════════════════════
-        // NAVIGATION
+        // MAIN NAVIGATION & STATE
         // ══════════════════════════════════════
         function showScreen(screenId) {
-            document.querySelectorAll('[id^="screen-"]').forEach(el => { el.classList.add('hidden'); el.classList.remove('flex'); });
-            const screen = document.getElementById(`screen-${screenId}`);
-            if (screen) { screen.classList.remove('hidden'); screen.classList.add('flex', 'fade-in'); }
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            // Remove hide from modal
+            document.getElementById(`screen-${screenId}`).classList.remove('hidden');
+            document.getElementById(`screen-${screenId}`).classList.add('active');
+            window.scrollTo(0, 0);
 
-            // Toggle bottom nav visibility
-            const bottomNav = document.getElementById('bottom-nav');
-            bottomNav.style.display = screenId === 'login' ? 'none' : 'flex';
+            // Hide or show bottom nav based on screen
+            const nav = document.getElementById('global-bottom-nav');
+            if (['meetings', 'recording', 'settings', 'meeting-detail'].includes(screenId)) {
+                nav.classList.remove('translate-y-[200%]');
+                // Reset colors:
+                ['meetings', 'recording', 'settings'].forEach(id => {
+                    if (document.getElementById(`nav-item-${id}`)) {
+                        document.getElementById(`nav-item-${id}`).classList.remove('text-primary');
+                        document.getElementById(`nav-item-${id}`).classList.add('text-slate-400');
+                        document.getElementById(`nav-icon-${id}`).classList.remove('font-variation-fill');
+                    }
+                });
+
+                // Color active:
+                let activeId = screenId;
+                if (screenId === 'meeting-detail') activeId = 'meetings'; // Acta relies on Meetings flow for now
+                if (document.getElementById(`nav-item-${activeId}`)) {
+                    document.getElementById(`nav-item-${activeId}`).classList.add('text-primary');
+                    document.getElementById(`nav-item-${activeId}`).classList.remove('text-slate-400');
+                    document.getElementById(`nav-icon-${activeId}`).classList.add('font-variation-fill');
+                }
+            } else {
+                nav.classList.add('translate-y-[200%]');
+            }
         }
 
-        // ══════════════════════════════════════
-        // AUTH
-        // ══════════════════════════════════════
+        // Back buttons modal logic
+        document.querySelectorAll('.btn-back-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                showScreen(btn.dataset.target.replace('screen-', ''));
+            });
+        });
 
-        // Check if returning from Google OAuth with token in URL
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('token')) {
-            token = urlParams.get('token');
-            localStorage.setItem('conferenceapp_token', token);
-            window.history.replaceState({}, '', '/');
+        // Main Back buttons
+        document.querySelectorAll('.btn-back').forEach(btn => {
+            btn.addEventListener('click', () => {
+                showScreen('meetings');
+                loadMeetings();
+            });
+        });
+
+        // Bottom Navigation functionality
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = btn.dataset.target;
+                if (target) {
+                    showScreen(target.replace('screen-', ''));
+                    // Si vamos a inicio, recargar
+                    if (target === 'screen-meetings') loadMeetings();
+                    // Si vamos a grabación manual, resetear UI
+                    if (target === 'screen-recording') {
+                        resetLiveUI();
+                        recMeetingId = null;
+                    }
+                }
+            });
+        });
+
+        // FAB Create Meeting
+        const btnCreateMeeting = document.getElementById('btn-create-meeting');
+        if (btnCreateMeeting) {
+            btnCreateMeeting.addEventListener('click', () => {
+                resetLiveUI();
+                recMeetingId = null;
+                showScreen('recording');
+            });
         }
+
+        // Recording screen Back button
+        const btnBackRec = document.getElementById('btn-back-rec');
+        if (btnBackRec) {
+            btnBackRec.addEventListener('click', () => {
+                showScreen('meetings');
+            });
+        }
+
+        // (Removed duplicate nav-btn logic)
+
+        // ══════════════════════════════════════
+        // AUTHENTICATION
+        // ══════════════════════════════════════
+        document.getElementById('btn-login-google').addEventListener('click', () => {
+            document.getElementById('btn-login-google').innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span>Conectando...';
+            window.location.href = `${API_BASE}/auth/login`;
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            localStorage.removeItem('conference_token');
+            token = null;
+            showScreen('login');
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('splash-loading').style.display = 'none';
+        });
 
         async function checkAuth() {
-            if (!token) { showScreen('login'); return; }
+            // Callback from Google OAuth?
+            const urlParams = new URLSearchParams(window.location.search);
+            const tokenParam = urlParams.get('token');
+            if (tokenParam) {
+                token = tokenParam;
+                localStorage.setItem('conference_token', token);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            if (!token) {
+                setTimeout(() => {
+                    document.getElementById('splash-loading').style.display = 'none';
+                    document.getElementById('login-container').style.display = 'block';
+                }, 1000);
+                return;
+            }
 
             try {
                 const res = await fetch(`${API_BASE}/me`, { headers: { 'Authorization': `Bearer ${token}` } });
                 if (!res.ok) throw new Error('Token inválido');
-                const data = await res.json();
-                currentUser = data.user;
-                document.getElementById('user-avatar').textContent = (currentUser.name || 'U').charAt(0).toUpperCase();
+                const user = await res.json();
+                currentUser = user;
+
+                // Set avatars
+                if (user.picture_url) {
+                    document.getElementById('user-avatar').src = user.picture_url;
+                    document.getElementById('settings-avatar').src = user.picture_url;
+                }
+                document.getElementById('settings-name').textContent = user.name;
+                document.getElementById('settings-email').textContent = user.email;
+
                 showScreen('meetings');
                 loadMeetings();
-            } catch {
-                localStorage.removeItem('conferenceapp_token');
+            } catch (err) {
+                localStorage.removeItem('conference_token');
                 token = null;
-                showScreen('login');
+                document.getElementById('splash-loading').style.display = 'none';
+                document.getElementById('login-container').style.display = 'block';
             }
         }
 
-        // ── Google Login ──
-        document.getElementById('btn-google-login').addEventListener('click', () => {
-            window.location.href = `${API_BASE}/auth/login`;
-        });
-
-        // ── Logout ──
-        document.getElementById('btn-logout').addEventListener('click', () => {
-            localStorage.removeItem('conferenceapp_token');
-            token = null;
-            currentUser = null;
-            showScreen('login');
-        });
-
         // ══════════════════════════════════════
-        // MEETINGS
+        // MEETINGS LIST
         // ══════════════════════════════════════
         async function loadMeetings() {
-            const container = document.getElementById('meetings-list');
+            const list = document.getElementById('meetings-list');
             try {
                 const res = await fetch(`${API_BASE}/meetings`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const data = await res.json();
 
-                if (!data.items || data.items.length === 0) {
-                    container.innerHTML = '<div class="text-center text-slate-400 text-sm mt-10">No hay reuniones aún. ¡Crea una nueva!</div>';
+                if (!data || data.length === 0) {
+                    list.innerHTML = `<div class="text-center mt-20 text-slate-400">
+                        <span class="material-symbols-outlined text-4xl mb-2 opacity-50">inbox</span>
+                        <p>No tienes reuniones guardadas.</p>
+                        <p class="text-xs mt-1">Usa el botón + para crear una.</p>
+                    </div>`;
                     return;
                 }
 
-                container.innerHTML = data.items.map(m => `
-                    <button onclick="openMeeting('${m.id}')" class="w-full text-left p-4 bg-slate-50 dark:bg-slate-900 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors fade-in">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h3 class="font-semibold text-sm">${m.title}</h3>
-                                <p class="text-xs text-slate-400 mt-1">${new Date(m.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                            </div>
-                            <span class="text-[10px] font-medium px-2 py-1 rounded-full ${m.status === 'READY' ? 'bg-emerald-100 text-emerald-700' :
-                        m.status === 'PROCESSING' ? 'bg-amber-100 text-amber-700' :
-                            'bg-slate-100 text-slate-500'
-                    }">${m.status}</span>
+                list.innerHTML = data.reverse().map(m => {
+                    // Choose Status UI
+                    let statusHtml = '';
+                    switch (m.status) {
+                        case 'DRAFT':
+                            statusHtml = `<div class="flex items-center gap-2">
+                                <span class="flex h-2 w-2 rounded-full bg-status-gray"></span>
+                                <span class="text-[10px] font-bold text-status-gray uppercase tracking-wider">Sin Audio</span>
+                            </div>`; break;
+                        case 'RECORDING':
+                            statusHtml = `<div class="flex items-center gap-2">
+                                <span class="flex h-2 w-2 rounded-full bg-status-red animate-pulse"></span>
+                                <span class="text-[10px] font-bold text-status-red uppercase tracking-wider">Por enviar</span>
+                            </div>`; break;
+                        case 'PROCESSING':
+                            statusHtml = `<div class="flex items-center gap-2">
+                                <span class="flex h-2 w-2 rounded-full bg-status-orange"></span>
+                                <span class="text-[10px] font-bold text-status-orange uppercase tracking-wider">Procesando</span>
+                            </div>`; break;
+                        case 'FINALIZED':
+                        default:
+                            statusHtml = `<div class="flex items-center gap-2">
+                                <span class="flex h-2 w-2 rounded-full bg-status-green"></span>
+                                <span class="text-[10px] font-bold text-status-green uppercase tracking-wider">Completada</span>
+                            </div>`; break;
+                    }
+
+                    const dateObj = new Date(m.created_at);
+                    const isToday = dateObj.toDateString() === new Date().toDateString();
+                    const dateStr = isToday ? 'Hoy' : dateObj.toLocaleDateString();
+
+                    return `
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl ios-shadow flex flex-col gap-2 cursor-pointer active:scale-[0.98] transition-all hover:border-primary/30" onclick="openMeetingRouter('${m.id}')">
+                        ${statusHtml}
+                        <h3 class="font-bold text-sm text-slate-900 dark:text-slate-100 truncate pr-2">${m.title}</h3>
+                        <div class="flex justify-between items-center mt-1">
+                             <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                                <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span>${dateStr}</span>
+                             </div>
+                             <span class="material-symbols-outlined text-sm text-slate-300">chevron_right</span>
                         </div>
-                    </button>
-                `).join('');
+                    </div>`;
+                }).join('');
             } catch (err) {
-                container.innerHTML = `<div class="text-red-500 text-sm text-center mt-10">Error: ${err.message}</div>`;
+                list.innerHTML = `<div class="text-center text-red-500 mt-10">Error al cargar reuniones</div>`;
             }
         }
 
-        // ── New Meeting ──
-        document.getElementById('btn-new-meeting').addEventListener('click', async () => {
-            const title = prompt('Nombre de la reunión:');
+        document.getElementById('btn-create-meeting').addEventListener('click', async () => {
+            const title = prompt('Título de la reunión:', `Reunión ${new Date().toLocaleDateString()}`);
             if (!title) return;
 
             try {
                 const res = await fetch(`${API_BASE}/meetings`, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ title })
                 });
-                const meeting = await res.json();
-                openRecording(meeting.id, title);
-            } catch (err) {
-                alert('Error creando reunión: ' + err.message);
-            }
+                const data = await res.json();
+                // Instead of detail, open recording directly
+                openLiveRecording(data.id, data.title);
+            } catch (err) { alert('Error: ' + err.message); }
         });
 
         // ══════════════════════════════════════
-        // RECORDING
+        // ROUTER: Open meeting logic
+        // ══════════════════════════════════════
+        async function openMeetingRouter(meetingId) {
+            try {
+                const res = await fetch(`${API_BASE}/meetings/${meetingId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const meeting = await res.json();
+
+                if (!meeting.audio_drive_file_id) {
+                    openLiveRecording(meetingId, meeting.title);
+                } else {
+                    openMeetingDetail(meetingId, meeting);
+                }
+            } catch (err) { alert("Error accediendo a reunión: " + err.message); }
+        }
+
+        // ══════════════════════════════════════
+        // LIVE RECORDING
         // ══════════════════════════════════════
         let mediaRecorder = null;
         let audioChunks = [];
@@ -455,46 +1201,108 @@
         let recStartTime = 0;
         let recMeetingId = null;
 
-        function openRecording(meetingId, title) {
+        function openLiveRecording(meetingId, title) {
             recMeetingId = meetingId;
-            currentMeetingId = meetingId;
             document.getElementById('rec-meeting-title').textContent = title;
-            resetRecordingUI();
+            resetLiveUI();
             showScreen('recording');
         }
 
-        function resetRecordingUI() {
+        function resetLiveUI() {
             recordedBlob = null;
             audioChunks = [];
-            document.getElementById('rec-timer').textContent = '00:00';
-            document.getElementById('rec-timer').className = 'text-5xl font-bold tracking-tight tabular-nums text-slate-300';
-            document.getElementById('rec-status').innerHTML = '<span class="material-symbols-outlined text-slate-400">mic</span><span class="text-sm text-slate-500">Pulsa para grabar</span>';
-            document.getElementById('rec-icon').textContent = 'mic';
-            document.getElementById('btn-record').className = 'size-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-all mt-4';
-            document.getElementById('rec-wave').style.display = 'none';
-            document.getElementById('rec-upload-section').style.display = 'none';
-            document.getElementById('rec-hint').textContent = 'Pulsa para empezar a grabar';
-            document.getElementById('upload-progress-bar').style.display = 'none';
-            document.getElementById('upload-progress-fill').style.width = '0%';
+            document.getElementById('rec-hours').textContent = '00';
+            document.getElementById('rec-minutes').textContent = '00';
+            document.getElementById('rec-seconds').textContent = '00';
+
+            document.getElementById('rec-status-text').textContent = 'Grabadora en Vivo';
+            document.getElementById('rec-meeting-title').textContent = recMeetingId ? 'Lista para grabar' : 'Crear nueva grabación';
+
+            document.getElementById('rec-hero-icon').textContent = 'mic';
+            document.getElementById('rec-hero-icon').style.fontVariationSettings = "'FILL' 0";
+            document.getElementById('rec-hero-circle').className = 'relative w-[72px] h-[72px] bg-slate-200 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center shadow-lg transition-colors z-10';
+            document.getElementById('rec-hero-pulse').classList.add('hidden');
+            document.getElementById('rec-hero-pulse-2').classList.add('hidden');
+
+            document.getElementById('rec-wave-bars').classList.replace('opacity-100', 'opacity-30');
+
+            document.getElementById('rec-controls-active').classList.remove('hidden');
+            document.getElementById('rec-controls-finished').classList.add('hidden');
+
+            // Reset record button to initial "stop" structure but function as Start? Wait, previous logic used the same 'btn-record-main' to start AND stop.
+            // On start it was changing the icon. Now we have two buttons in the layout.
+            // Let's ensure btn-record-main acts as STOP when recording, and "START" when not recording?
+            // Wait, the requested UI has 'Pausar' and 'Detener' already. So maybe we should just change it to 'Grabar' when not recording?
+            const btnMain = document.getElementById('btn-record-main');
+            btnMain.innerHTML = `
+                <div class="w-7 h-7 rounded-full bg-white text-red-500 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">fiber_manual_record</span>
+                </div>
+                <span class="text-[13px]">Grabar</span>
+            `;
+            btnMain.className = 'flex-1 flex flex-col items-center justify-center gap-2 rounded-3xl bg-red-500 text-white font-bold shadow-lg shadow-red-500/20 hover:bg-red-600 active:scale-95 transition-all border-none outline-none';
+            document.getElementById('btn-pause-record').classList.add('opacity-50', 'cursor-not-allowed');
         }
 
-        function updateRecTimer() {
+        function updateLiveTimer() {
             const elapsed = Math.floor((Date.now() - recStartTime) / 1000);
-            const min = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const hrs = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+            const min = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
             const sec = String(elapsed % 60).padStart(2, '0');
-            document.getElementById('rec-timer').textContent = `${min}:${sec}`;
+            document.getElementById('rec-hours').textContent = hrs;
+            document.getElementById('rec-minutes').textContent = min;
+            document.getElementById('rec-seconds').textContent = sec;
         }
 
-        document.getElementById('btn-record').addEventListener('click', async () => {
+        let isPaused = false;
+
+        document.getElementById('btn-pause-record').addEventListener('click', () => {
+            if (!mediaRecorder) return;
+            const btn = document.getElementById('btn-pause-record');
+            if (mediaRecorder.state === 'recording') {
+                mediaRecorder.pause();
+                isPaused = true;
+                document.getElementById('rec-status-text').textContent = 'Pausado';
+                document.getElementById('rec-hero-pulse').classList.add('hidden');
+                document.getElementById('rec-hero-pulse-2').classList.add('hidden');
+                document.getElementById('rec-wave-bars').classList.replace('opacity-100', 'opacity-30');
+                btn.innerHTML = `
+                    <div class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                    </div>
+                    <span class="text-[13px] text-primary">Reanudar</span>
+                `;
+            } else if (mediaRecorder.state === 'paused') {
+                mediaRecorder.resume();
+                isPaused = false;
+                document.getElementById('rec-status-text').textContent = 'Grabando...';
+                document.getElementById('rec-hero-pulse').classList.remove('hidden');
+                document.getElementById('rec-hero-pulse-2').classList.remove('hidden');
+                document.getElementById('rec-wave-bars').classList.replace('opacity-30', 'opacity-100');
+                btn.innerHTML = `
+                    <div class="w-7 h-7 rounded-full bg-slate-700 dark:bg-slate-400 text-white dark:text-slate-900 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">pause</span>
+                    </div>
+                    <span class="text-[13px]">Pausar</span>
+                `;
+            }
+        });
+
+        document.getElementById('btn-record-main').addEventListener('click', async () => {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 // STOP recording
                 mediaRecorder.stop();
                 clearInterval(recInterval);
-                document.getElementById('rec-status').innerHTML = '<span class="material-symbols-outlined text-emerald-500">check_circle</span><span class="text-sm text-emerald-600">Grabación completada</span>';
-                document.getElementById('rec-icon').textContent = 'mic';
-                document.getElementById('btn-record').className = 'size-20 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center shadow-lg transition-all mt-4';
-                document.getElementById('rec-wave').style.display = 'none';
-                document.getElementById('rec-hint').textContent = '';
+
+                document.getElementById('rec-status-text').textContent = 'Grabación Detenida';
+                document.getElementById('rec-hero-icon').textContent = 'check';
+                document.getElementById('rec-hero-circle').className = 'relative w-[72px] h-[72px] bg-primary text-white rounded-full flex items-center justify-center shadow-lg transition-colors z-10';
+                document.getElementById('rec-hero-pulse').classList.add('hidden');
+                document.getElementById('rec-hero-pulse-2').classList.add('hidden');
+                document.getElementById('rec-wave-bars').classList.replace('opacity-100', 'opacity-30');
+
+                document.getElementById('rec-controls-active').classList.add('hidden');
+                document.getElementById('rec-controls-finished').classList.remove('hidden');
                 return;
             }
 
@@ -514,74 +1322,38 @@
                     const min = Math.floor(elapsed / 60);
                     const sec = elapsed % 60;
                     document.getElementById('rec-duration-info').textContent = `Duración: ${min}m ${sec}s — ${(recordedBlob.size / 1024 / 1024).toFixed(1)} MB`;
-                    document.getElementById('rec-upload-section').style.display = 'block';
                 };
 
                 mediaRecorder.start(1000);
                 recStartTime = Date.now();
-                recInterval = setInterval(updateRecTimer, 1000);
+                recInterval = setInterval(updateLiveTimer, 1000);
 
-                document.getElementById('rec-timer').className = 'text-5xl font-bold tracking-tight tabular-nums text-red-500';
-                document.getElementById('rec-status').innerHTML = '<span class="size-3 rounded-full bg-red-500 rec-pulse"></span><span class="text-sm font-medium text-red-500">Grabando...</span>';
-                document.getElementById('rec-icon').textContent = 'stop';
-                document.getElementById('btn-record').className = 'size-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-all mt-4 rec-pulse';
-                document.getElementById('rec-wave').style.display = 'flex';
-                document.getElementById('rec-wave').className = 'flex items-center justify-center gap-1 h-8 text-red-400';
-                document.getElementById('rec-hint').textContent = 'Pulsa para detener';
+                // UI update TO RECORDING
+                document.getElementById('rec-status-text').textContent = 'Grabando...';
+                document.getElementById('rec-hero-icon').style.fontVariationSettings = "'FILL' 1";
+                document.getElementById('rec-hero-circle').className = 'relative w-[72px] h-[72px] bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg z-10';
+                document.getElementById('rec-hero-pulse').classList.remove('hidden');
+                document.getElementById('rec-hero-pulse-2').classList.remove('hidden');
+                document.getElementById('rec-wave-bars').classList.replace('opacity-30', 'opacity-100');
+
+                document.getElementById('btn-pause-record').classList.remove('opacity-50', 'cursor-not-allowed');
+
+                const btnM = document.getElementById('btn-record-main');
+                btnM.innerHTML = `
+                <div class="w-7 h-7 rounded-full bg-white text-red-500 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">stop</span>
+                </div>
+                <span class="text-[13px]">Detener</span>
+                `;
+                btnM.className = 'flex-1 flex flex-col items-center justify-center gap-2 rounded-3xl bg-red-500 text-white font-bold shadow-lg shadow-red-500/20 hover:bg-red-600 active:scale-95 transition-all border-none outline-none';
+
             } catch (err) {
                 alert('No se pudo acceder al micrófono: ' + err.message);
             }
         });
 
-        // Re-record
-        document.getElementById('btn-re-record').addEventListener('click', () => {
-            resetRecordingUI();
-        });
+        document.getElementById('btn-re-record').addEventListener('click', resetLiveUI);
 
-        // Upload audio
-        document.getElementById('btn-upload-audio').addEventListener('click', async () => {
-            if (!recordedBlob || !recMeetingId) return;
-
-            const btn = document.getElementById('btn-upload-audio');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">progress_activity</span> Subiendo...';
-            document.getElementById('upload-progress-bar').style.display = 'block';
-            document.getElementById('upload-progress-fill').style.width = '30%';
-
-            try {
-                const formData = new FormData();
-                formData.append('audio', recordedBlob, 'recording.webm');
-
-                document.getElementById('upload-progress-fill').style.width = '60%';
-
-                const res = await fetch(`${API_BASE}/meetings/${recMeetingId}/audio:complete`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-
-                document.getElementById('upload-progress-fill').style.width = '100%';
-
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error_message || 'Error subiendo audio');
-                }
-
-                btn.innerHTML = '<span class="material-symbols-outlined text-[20px]">check</span> ¡Subido!';
-                btn.className = btn.className.replace('bg-primary', 'bg-emerald-500');
-
-                setTimeout(() => {
-                    showScreen('meetings');
-                    loadMeetings();
-                }, 1500);
-            } catch (err) {
-                alert('Error subiendo audio: ' + err.message);
-                btn.disabled = false;
-                btn.innerHTML = '<span class="material-symbols-outlined text-[20px]">cloud_upload</span> Reintentar subida';
-            }
-        });
-
-        // Back from recording
         document.getElementById('btn-back-rec').addEventListener('click', () => {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 mediaRecorder.stop();
@@ -592,115 +1364,310 @@
         });
 
         // ══════════════════════════════════════
-        // TRANSCRIPT
+        // UPLOAD LOGIC & PROCESSING UI SIMULATION
         // ══════════════════════════════════════
-        async function openMeeting(meetingId) {
-            currentMeetingId = meetingId;
+        function setProgress(percent) {
+            const circle = document.getElementById('upload-progress-circle');
+            const circumference = 377; // 2 * pi * 60
+            const offset = circumference - (percent / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+            document.getElementById('upload-percent').textContent = `${percent}%`;
+        }
 
-            try {
-                const meetRes = await fetch(`${API_BASE}/meetings/${meetingId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const meeting = await meetRes.json();
+        function setStepState(stepNum, state, title, subtitle) {
+            const step = document.getElementById(`step-${stepNum}`);
+            const icon = document.getElementById(`step-${stepNum}-icon`);
+            const titleEl = document.getElementById(`step-${stepNum}-title`);
+            const subtitleEl = document.getElementById(`step-${stepNum}-subtitle`);
 
-                // Si la reunión aún no tiene audio, ir a pantalla de grabación
-                if (meeting.status === 'DRAFT' && !meeting.audio_drive_file_id) {
-                    openRecording(meetingId, meeting.title);
-                    return;
-                }
+            if (title) titleEl.textContent = title;
+            if (subtitle) subtitleEl.textContent = subtitle;
 
-                // Si ya tiene audio, mostrar transcripción
-                showScreen('transcript');
-                document.getElementById('meeting-title').textContent = meeting.title;
-
-                const transRes = await fetch(`${API_BASE}/meetings/${meetingId}/transcript`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const transData = await transRes.json();
-                renderTranscript(transData.segments);
-            } catch (err) {
-                document.getElementById('transcript-container').innerHTML = `<div class="text-red-500 text-sm text-center mt-10">Error: ${err.message}</div>`;
+            if (state === 'active') {
+                step.classList.replace('opacity-50', 'opacity-100');
+                icon.className = 'w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md shadow-primary/20 shrink-0';
+                icon.innerHTML = `<span class="material-symbols-outlined text-[16px] animate-spin">refresh</span>`;
+            } else if (state === 'done') {
+                step.classList.replace('opacity-50', 'opacity-100');
+                icon.className = 'w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md shadow-primary/20 shrink-0';
+                icon.innerHTML = `<span class="material-symbols-outlined text-[16px]">check</span>`;
             }
         }
 
-        function renderTranscript(segments) {
+        document.getElementById('btn-upload-audio').addEventListener('click', async () => {
+            if (!recordedBlob || !recMeetingId) return;
+
+            showScreen('processing');
+
+            // Reset Progress UI
+            setProgress(0);
+            document.getElementById('processing-title').textContent = 'Subiendo audio...';
+            document.getElementById('processing-subtitle').textContent = 'Enviando el archivo a los servidores para su análisis.';
+            setStepState(1, 'active', 'Subiendo archivo', 'Enviando al servidor...');
+            setStepState(2, 'pending'); setStepState(3, 'pending'); setStepState(4, 'pending');
+
+            try {
+                const formData = new FormData();
+                formData.append('audio', recordedBlob, 'recording.webm');
+
+                // Simulate progress during upload fetch
+                setTimeout(() => { setProgress(30); }, 500);
+
+                const res = await fetch(`${API_BASE}/meetings/${recMeetingId}/audio:complete`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error_message || 'Error subiendo audio');
+                }
+
+                setProgress(50);
+                setStepState(1, 'done', 'Audio subido', 'Archivo procesado correctamente');
+
+                // Simulate Transcription UI
+                document.getElementById('processing-title').textContent = 'Transcribiendo...';
+                document.getElementById('processing-subtitle').textContent = 'Estamos convirtiendo tu audio en texto rápido.';
+                setStepState(2, 'active', 'Transcribiendo audio', 'Identificando locutores...');
+
+                setTimeout(() => {
+                    setProgress(80);
+                    setStepState(2, 'done', 'Transcripción lista', 'Texto generado');
+                    setStepState(3, 'active', 'Generando acta', 'Extrayendo puntos clave...');
+                    document.getElementById('processing-title').textContent = 'Generando Acta...';
+                }, 1500);
+
+                setTimeout(() => {
+                    setProgress(100);
+                    setStepState(3, 'done', 'Acta generada', 'Resumen listo');
+                    setStepState(4, 'done', 'Exportación lista', 'Guardado en Drive');
+                    document.getElementById('processing-title').textContent = '¡Todo listo!';
+                    document.getElementById('processing-subtitle').textContent = 'Redirigiendo a tu acta...';
+                }, 2500);
+
+                setTimeout(() => {
+                    openMeetingRouter(recMeetingId); // Open details
+                }, 3500);
+
+            } catch (err) {
+                alert('Error de conexión al subir: ' + err.message);
+                showScreen('recording'); // back to try again
+            }
+        });
+
+        // ══════════════════════════════════════
+        // MEETING DETAILS (MINUTES / TRANSCR)
+        // ══════════════════════════════════════
+        let currentDetailMeetingId = null;
+
+        document.querySelectorAll('.detail-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                // Deselect all
+                document.querySelectorAll('.detail-tab').forEach(t => {
+                    t.classList.remove('border-primary', 'text-primary');
+                    t.classList.add('border-transparent', 'text-slate-500');
+                });
+                document.querySelectorAll('#screen-meeting-detail main').forEach(m => m.classList.add('hidden'));
+
+                // Select clicked
+                const target = e.currentTarget;
+                target.classList.remove('border-transparent', 'text-slate-500');
+                target.classList.add('border-primary', 'text-primary');
+
+                const tabId = target.dataset.tab;
+                document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            });
+        });
+
+        async function openMeetingDetail(meetingId, meetingData) {
+            currentDetailMeetingId = meetingId;
+            document.getElementById('detail-meeting-title').textContent = meetingData.title;
+            document.getElementById('detail-status-badge').textContent = `ESTADO: ${meetingData.status}`;
+
+            showScreen('meeting-detail');
+            // Default select Acta tab
+            document.querySelector('.detail-tab[data-tab="acta"]').click();
+
+            // Load Minutes
+            try {
+                const resM = await fetch(`${API_BASE}/minutes/${meetingId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (resM.ok) {
+                    const minData = await resM.json();
+                    document.getElementById('btn-generate-acta-container').classList.add('hidden');
+                    document.getElementById('acta-content-wrapper').classList.remove('hidden');
+                    document.getElementById('acta-content').value = minData.content_md || '';
+                } else {
+                    // No minutes exist yet
+                    document.getElementById('acta-content-wrapper').classList.add('hidden');
+                    document.getElementById('btn-generate-acta-container').classList.remove('hidden');
+                }
+            } catch (err) { console.error('Error cargando acta', err); }
+
+            // Load Transcript
+            try {
+                const transRes = await fetch(`${API_BASE}/meetings/${meetingId}/transcript`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const transData = await transRes.json();
+                renderTranscriptDetail(transData.segments);
+            } catch (err) { }
+        }
+
+        document.getElementById('btn-generate-acta').addEventListener('click', async () => {
+            try {
+                const btn = document.getElementById('btn-generate-acta');
+                btn.innerHTML = 'Generando...';
+                const res = await fetch(`${API_BASE}/meetings/${currentDetailMeetingId}/ai:generate`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const minData = await res.json();
+                document.getElementById('btn-generate-acta-container').classList.add('hidden');
+                document.getElementById('acta-content-wrapper').classList.remove('hidden');
+                // The mock endpoint returns { minutes: { content_md : "..." } }
+                document.getElementById('acta-content').value = minData.minutes.content_md;
+            } catch (err) { alert('Error: ' + err.message); }
+        });
+
+        document.getElementById('btn-save-minutes').addEventListener('click', async () => {
+            const text = document.getElementById('acta-content').value;
+            try {
+                await fetch(`${API_BASE}/minutes/${currentDetailMeetingId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ content_md: text })
+                });
+                alert('Guardado en base de datos.');
+            } catch (err) { alert('Error: ' + err.message); }
+        });
+
+        function renderTranscriptDetail(segments) {
             const container = document.getElementById('transcript-container');
             if (!segments || segments.length === 0) {
-                container.innerHTML = '<div class="text-slate-500 text-center mt-10">No hay transcripciones disponibles.</div>';
+                container.innerHTML = '<div class="text-slate-500 text-center mt-10">No hay transcripción o aún se está procesando.</div>';
                 return;
             }
 
-            const speakerColors = ['bg-primary', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-500'];
+            const colors = ['bg-primary', 'bg-emerald-500', 'bg-amber-500'];
+            let html = '';
 
-            container.innerHTML = segments.map((seg, i) => {
-                const initial = (seg.speaker_name || 'X').charAt(0).toUpperCase();
-                const ms = seg.start_ms || 0;
-                const timeStr = new Date(ms).toISOString().substr(11, 8);
-                const color = speakerColors[i % speakerColors.length];
-                const isFirst = i === 0;
-                const wrap = isFirst
-                    ? 'group relative bg-primary/5 -mx-4 px-4 py-4 border-l-4 border-primary'
-                    : 'group px-0 py-2';
-
-                return `<div class="${wrap} fade-in">
+            segments.forEach((seg, i) => {
+                const color = colors[i % colors.length];
+                const initial = (seg.speaker_name || "X")[0].toUpperCase();
+                html += `
+                <div class="group px-0 py-2 border-l-2 border-transparent hover:border-slate-300 dark:hover:border-slate-600 pl-3 transition-colors">
                     <div class="flex items-start justify-between mb-2">
                         <div class="flex items-center gap-2">
-                            <div class="flex items-center justify-center size-8 rounded-full ${color} text-white text-xs font-bold">${initial}</div>
-                            <span class="font-semibold text-sm">${seg.speaker_name} (${seg.speaker_label})</span>
-                            <span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">${timeStr}</span>
+                            <div class="flex items-center justify-center size-7 rounded-full ${color} text-white text-[10px] font-bold shadow-sm">${initial}</div>
+                            <span class="font-semibold text-xs text-slate-900 dark:text-slate-100">${seg.speaker_name} (${seg.speaker_label})</span>
                         </div>
                     </div>
                     <p class="text-sm leading-relaxed text-slate-700 dark:text-slate-300">${seg.text}</p>
                 </div>`;
-            }).join('');
+            });
+            container.innerHTML = html;
         }
 
-        // ── Back button ──
-        document.getElementById('btn-back').addEventListener('click', () => {
-            showScreen('meetings');
-            loadMeetings();
-        });
+        // ══════════════════════════════════════
+        // AI ASSISTANT CHAT
+        // ══════════════════════════════════════
+        const aiBtnToggle = document.getElementById('btn-toggle-ai');
+        const aiInput = document.getElementById('ai-input');
+        const aiBtnSend = document.getElementById('btn-send-ai');
+        const aiHistory = document.getElementById('ai-chat-history');
 
-        // ── Tabs ──
-        document.querySelectorAll('.tab-link').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                e.preventDefault();
-                document.querySelectorAll('.tab-link').forEach(t => {
-                    t.className = 'tab-link flex-1 py-3 text-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors';
-                });
-                tab.className = 'tab-link flex-1 py-3 text-center text-sm font-bold text-primary border-b-2 border-primary';
-
-                const container = document.getElementById('transcript-container');
-                if (tab.dataset.tab === 'transcripcion' && currentMeetingId) {
-                    openMeeting(currentMeetingId);
-                } else {
-                    container.innerHTML = `<div class="text-slate-500 text-center mt-10">Vista de ${tab.textContent} — próximamente.</div>`;
+        if (aiBtnToggle) {
+            aiBtnToggle.addEventListener('click', () => {
+                showScreen('ai-assistant');
+                if (currentDetailMeetingId) {
+                    const title = document.getElementById('detail-meeting-title').textContent;
+                    document.getElementById('ai-assistant-header-title').textContent = title;
                 }
             });
-        });
+        }
 
-        // ── Bottom tabs ──
-        document.querySelectorAll('.bottom-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                e.preventDefault();
-                document.querySelectorAll('.bottom-tab').forEach(t => {
-                    t.className = 'bottom-tab flex flex-col items-center gap-1 text-slate-400';
-                    t.querySelector('.material-symbols-outlined').classList.remove('fill-1');
-                });
-                tab.className = 'bottom-tab flex flex-col items-center gap-1 text-primary';
-                tab.querySelector('.material-symbols-outlined').classList.add('fill-1');
-
-                if (tab.dataset.screen === 'meetings') { showScreen('meetings'); loadMeetings(); }
+        document.querySelectorAll('.ai-suggestion-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Remove quotes from suggestion text
+                const text = e.target.innerText.replace(/^"|"$/g, '');
+                sendAiMessage(text);
             });
         });
 
-        // ══════════════════════════════════════
-        // PWA Registration
-        // ══════════════════════════════════════
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').then(() => {
-                console.log('Service Worker registrado');
+        aiBtnSend.addEventListener('click', () => {
+            const text = aiInput.value.trim();
+            if (text) sendAiMessage(text);
+        });
+
+        aiInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const text = aiInput.value.trim();
+                if (text) sendAiMessage(text);
+            }
+        });
+
+        function appendMessage(isUser, text) {
+            const div = document.createElement('div');
+            div.className = `flex ${isUser ? 'justify-end' : 'justify-start'} w-full`;
+
+            const inner = document.createElement('div');
+            inner.className = `max-w-[85%] rounded-2xl p-3 text-sm ${isUser ? 'bg-primary text-white rounded-tr-none' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none'}`;
+            inner.textContent = text;
+            div.appendChild(inner);
+
+            aiHistory.appendChild(div);
+            aiHistory.scrollTop = aiHistory.scrollHeight;
+        }
+
+        async function sendAiMessage(text) {
+            if (!currentDetailMeetingId) return;
+
+            aiInput.value = '';
+            appendMessage(true, text);
+
+            // Wait/Loading state
+            const loadingId = 'ai-loading-' + Date.now();
+            const div = document.createElement('div');
+            div.id = loadingId;
+            div.className = 'flex justify-start w-full';
+            div.innerHTML = `<div class="max-w-[85%] rounded-2xl rounded-tl-none p-3 text-sm bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center gap-2">
+                 <span class="material-symbols-outlined animate-spin text-sm">refresh</span> Pensando...
+             </div>`;
+            aiHistory.appendChild(div);
+            aiHistory.scrollTop = aiHistory.scrollHeight;
+
+            try {
+                const res = await fetch(`${API_BASE}/meetings/${currentDetailMeetingId}/ai:query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ query: text })
+                });
+                const data = await res.json();
+
+                document.getElementById(loadingId).remove();
+                appendMessage(false, data.answer || "El asistente resolvió tu consulta, pero hubo un error de formato.");
+            } catch (err) {
+                document.getElementById(loadingId).remove();
+                appendMessage(false, "❌ Error de conexión con el Asistente IA.");
+            }
+        }
+
+        // Export PDF Provisional Logic
+        const btnExportMain = document.querySelector('#tab-export button');
+        if (btnExportMain) {
+            btnExportMain.addEventListener('click', () => {
+                showScreen('export-preview');
+                if (currentDetailMeetingId) {
+                    document.getElementById('export-preview-title').textContent = document.getElementById('detail-meeting-title').textContent;
+                    document.getElementById('export-preview-date').textContent = new Date().toLocaleDateString();
+                    document.getElementById('export-preview-summary').textContent = document.getElementById('acta-content').value.substring(0, 150) + '...';
+                }
             });
         }
 
-        // ── Init ──
+        // INIT
         checkAuth();
+
     </script>
 </body>
 
