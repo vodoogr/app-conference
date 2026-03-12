@@ -163,9 +163,22 @@ v1.post('/meetings/:id/audio:complete', verifyToken, upload.single('audio'), asy
 
     // Asegurar que las carpetas existan
     const folders = await initDriveFolders(user.google_refresh_token);
-    // Limpieza de fileName
+
+    // Mejorar manejo de extensiones
+    const extensions = {
+      'audio/mpeg': 'mp3',
+      'audio/mp3': 'mp3',
+      'audio/wav': 'wav',
+      'audio/ogg': 'ogg',
+      'audio/webm': 'webm',
+      'audio/x-m4a': 'm4a',
+      'audio/m4a': 'm4a',
+      'audio/mp4': 'm4a'
+    };
+    const ext = extensions[mimeType] || (req.file ? req.file.originalname.split('.').pop() : 'webm');
+
     let sanitizedTitle = meeting.title ? meeting.title.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '_') : 'Reunion';
-    const fileName = `${sanitizedTitle}.webm`;
+    const fileName = `${sanitizedTitle}.${ext}`;
 
     const result = await uploadAudio(user.google_refresh_token, audioBuffer, fileName, mimeType, folders.audiosFolderId);
 

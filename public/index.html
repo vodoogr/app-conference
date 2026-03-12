@@ -378,6 +378,14 @@
                         <span class="text-[13px]">Detener</span>
                     </button>
                 </div>
+                <!-- File Upload Access -->
+                <div class="w-full text-center mt-6">
+                    <p class="text-xs text-slate-500">¿Ya tienes una grabación?
+                        <button id="btn-trigger-file" class="text-primary font-bold hover:underline">Sube un
+                            archivo</button>
+                    </p>
+                    <input type="file" id="audio-file-input" accept="audio/*" class="hidden">
+                </div>
 
                 <!-- Finished Controls (Upload) -->
                 <div class="flex flex-col gap-3 w-full mt-4 hidden" id="rec-controls-finished">
@@ -1355,7 +1363,39 @@
             }
         });
 
-        document.getElementById('btn-re-record').addEventListener('click', resetLiveUI);
+        const fileInput = document.getElementById('audio-file-input');
+        const btnTriggerFile = document.getElementById('btn-trigger-file');
+
+        if (btnTriggerFile) {
+            btnTriggerFile.addEventListener('click', () => fileInput.click());
+        }
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            recordedBlob = file;
+            console.log("Archivo seleccionado:", file.name, file.size, file.type);
+
+            // Update UI to "Finished" state
+            document.getElementById('rec-status-text').textContent = 'Archivo Seleccionado';
+            document.getElementById('rec-meeting-title').textContent = file.name;
+            document.getElementById('rec-hero-icon').textContent = 'audio_file';
+            document.getElementById('rec-hero-circle').className = 'relative w-[72px] h-[72px] bg-primary text-white rounded-full flex items-center justify-center shadow-lg transition-colors z-10';
+
+            document.getElementById('rec-duration-info').textContent = `Archivo: ${(file.size / 1024 / 1024).toFixed(1)} MB — ${file.type}`;
+
+            document.getElementById('rec-controls-active').classList.add('hidden');
+            document.getElementById('rec-controls-finished').classList.remove('hidden');
+
+            // Show waves at 50% opacity to indicate content
+            document.getElementById('rec-wave-bars').classList.replace('opacity-30', 'opacity-50');
+        });
+
+        document.getElementById('btn-re-record').addEventListener('click', () => {
+            fileInput.value = ''; // Clear file input
+            resetLiveUI();
+        });
 
         document.getElementById('btn-back-rec').addEventListener('click', () => {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
