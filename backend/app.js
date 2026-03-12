@@ -10,6 +10,7 @@ const { verifyToken, signToken } = require('./lib/middleware');
 const { getAuthUrl, getTokensFromCode, getGoogleUserInfo } = require('./lib/google-auth');
 const { initDriveFolders, uploadAudio, uploadMinutes, getDownloadUrl, deleteFile } = require('./lib/drive');
 const db = require('./lib/supabase');
+const { uploadAudioToGemini, processAudioAndGenerateMinutes, chatWithAssistant } = require('./lib/genai');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -162,16 +163,56 @@ v1.post('/meetings/:id/audio:complete', verifyToken, upload.single('audio'), asy
 
     // Asegurar que las carpetas existan
     const folders = await initDriveFolders(user.google_refresh_token);
-    const fileName = `${meeting.title.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '_')}.webm`;
+    // Limpieza de fileName
+    let sanitizedTitle = meeting.title ? meeting.title.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '_') : 'Reunion';
+    const fileName = `${sanitizedTitle}.webm`;
 
     const result = await uploadAudio(user.google_refresh_token, audioBuffer, fileName, mimeType, folders.audiosFolderId);
 
+    // 1. Marcar como PROCESSING en BD
     await db.updateMeeting(req.params.id, {
       audio_drive_file_id: result.fileId,
       status: 'PROCESSING',
     });
 
+    // Respuesta rápida al frontend para no bloquear la pantalla de "Procesando"
     res.json({ ok: true, meeting_status: 'PROCESSING', drive_file_id: result.fileId });
+
+    // 2. Procesamiento Async en background con Gemini
+    (async () => {
+      try {
+        console.log(`Iniciando IA Async para reunión ${req.params.id}`);
+        // Subir a File API de Gemini
+        const geminiFile = await uploadAudioToGemini(audioBuffer, mimeType, fileName);
+
+        // Transcribir y generar acta a la vez
+        const { transcriptSegments, minutesMarkdown } = await processAudioAndGenerateMinutes(geminiFile);
+
+        // Guardar Transcripción
+        const segmentsToSave = transcriptSegments.map(seg => ({
+          ...seg,
+          id: `seg_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
+        }));
+        await db.upsertTranscript(req.params.id, segmentsToSave);
+
+        // Crear/Sobrescribir Acta Inicial
+        const existingMinutesData = await db.supabase?.from('minutes').select('id').eq('meeting_id', req.params.id).single();
+        if (existingMinutesData?.data) {
+          await db.updateMinutes(existingMinutesData.data.id, { content_md: minutesMarkdown });
+        } else {
+          await db.createMinutes(req.params.id, minutesMarkdown);
+        }
+
+        // Marcar Reunión como Completada
+        await db.updateMeeting(req.params.id, { status: 'COMPLETED' });
+        console.log(`✓ IA Async finalizada ok para reunión ${req.params.id}`);
+
+      } catch (aiError) {
+        console.error(`Error en IA Async para reunión ${req.params.id}:`, aiError);
+        // Podríamos actualizar el status de la meeting a un 'ERROR' si quisieramos
+      }
+    })();
+
   } catch (error) {
     console.error('Error subiendo audio:', error);
     res.status(500).json({ error_code: 'UPLOAD_ERROR', error_message: error.message });
@@ -238,16 +279,21 @@ v1.post('/meetings/:id/minutes:generate', verifyToken, async (req, res) => {
   res.json({ minutes });
 });
 
-v1.post('/meetings/:id/ai:query', verifyToken, (req, res) => {
-  // Placeholder para integración con IA
-  const { intent } = req.body;
-  const responses = {
-    bullets: '- Punto principal discutido\n- Siguiente paso definido\n- Responsables asignados',
-    decisions: '- Decisión 1: Aprobado el presupuesto Q1\n- Decisión 2: Lanzamiento v2 para marzo',
-    tasks: '- [ ] María: Preparar informe KPIs\n- [ ] Juan: Configurar entorno staging',
-    rewrite_minutes: '# Acta Reescrita\n\nContenido optimizado por IA.',
-  };
-  res.json({ result_md: responses[intent] || '- Sin resultados' });
+v1.post('/meetings/:id/ai:query', verifyToken, async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error_message: 'Falta prompt' });
+
+    // Recuperar la transcripción actual para usarla de contexto
+    const transcript = await db.getTranscript(req.params.id);
+    const segments = transcript ? transcript.segments : [];
+
+    const reply = await chatWithAssistant(prompt, segments);
+    res.json({ result_md: reply });
+  } catch (error) {
+    console.error('Error en ai:query:', error);
+    res.status(500).json({ error_message: 'Error procesando la consulta con la IA' });
+  }
 });
 
 // ── Minutes CRUD ──

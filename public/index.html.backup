@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport" />
+    <title>ConferenceApp - Voice Minutes</title>
+    <meta name="description" content="Graba, transcribe y genera actas de tus reuniones automáticamente." />
+    <meta name="theme-color" content="#195de6" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#195de6",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                    },
+                    fontFamily: { "display": ["Inter"] },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 100dvh;
+        }
+
+        .ios-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .google-btn {
+            background: #fff;
+            border: 1px solid #dadce0;
+            border-radius: 20px;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #3c4043;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: box-shadow 0.2s;
+        }
+
+        .google-btn:hover {
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Recording animations */
+        .rec-pulse {
+            animation: recPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes recPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+            }
+
+            50% {
+                transform: scale(1.08);
+                box-shadow: 0 0 0 18px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .wave-bar {
+            display: inline-block;
+            width: 4px;
+            border-radius: 2px;
+            background: currentColor;
+            animation: waveAnim 0.8s ease-in-out infinite;
+        }
+
+        .wave-bar:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .wave-bar:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        .wave-bar:nth-child(4) {
+            animation-delay: 0.3s;
+        }
+
+        .wave-bar:nth-child(5) {
+            animation-delay: 0.15s;
+        }
+
+        @keyframes waveAnim {
+
+            0%,
+            100% {
+                height: 8px;
+            }
+
+            50% {
+                height: 24px;
+            }
+        }
+
+        .upload-progress {
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+    <div
+        class="relative mx-auto min-h-screen max-w-[430px] bg-white dark:bg-slate-950 flex flex-col shadow-2xl overflow-hidden border-x border-slate-200 dark:border-slate-800">
+
+        <!-- Status Bar -->
+        <div class="h-12 w-full flex justify-between items-center px-8 pt-4">
+            <span class="text-sm font-semibold" id="clock">--:--</span>
+            <div class="flex gap-1.5 items-center">
+                <span class="material-symbols-outlined text-[18px]">signal_cellular_4_bar</span>
+                <span class="material-symbols-outlined text-[18px]">wifi</span>
+                <span class="material-symbols-outlined text-[18px]">battery_full</span>
+            </div>
+        </div>
+
+        <!-- ═══ LOGIN SCREEN ═══ -->
+        <div id="screen-login" class="flex-1 flex flex-col items-center justify-center px-8 gap-6">
+            <img src="/icons/icon-192.png" class="w-20 h-20 rounded-2xl shadow-lg" alt="ConferenceApp" />
+            <h1 class="text-2xl font-bold tracking-tight">ConferenceApp</h1>
+            <p class="text-sm text-slate-500 text-center">Graba, transcribe y genera actas de tus reuniones
+                automáticamente.</p>
+            <button id="btn-google-login" class="google-btn mt-4">
+                <svg width="18" height="18" viewBox="0 0 18 18">
+                    <path fill="#4285F4"
+                        d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.49h4.84a4.14 4.14 0 0 1-1.8 2.71v2.26h2.92a8.78 8.78 0 0 0 2.68-6.62z" />
+                    <path fill="#34A853"
+                        d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.83.86-3.04.86-2.34 0-4.33-1.58-5.04-3.71H.96v2.33A8.99 8.99 0 0 0 9 18z" />
+                    <path fill="#FBBC05"
+                        d="M3.96 10.71A5.41 5.41 0 0 1 3.64 9c0-.59.1-1.17.28-1.71V4.96H.96A8.99 8.99 0 0 0 0 9c0 1.45.35 2.82.96 4.04l3-2.33z" />
+                    <path fill="#EA4335"
+                        d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A8.99 8.99 0 0 0 .96 4.96l3 2.33C4.67 5.16 6.66 3.58 9 3.58z" />
+                </svg>
+                Iniciar sesión con Google
+            </button>
+            <p class="text-[11px] text-slate-400 text-center mt-2">Al iniciar sesión, permitirás que ConferenceApp
+                guarde audios y actas en tu Google Drive.</p>
+        </div>
+
+        <!-- ═══ MEETINGS LIST SCREEN ═══ -->
+        <div id="screen-meetings" class="flex-1 flex-col hidden">
+            <header class="flex items-center p-4 justify-between border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="size-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold"
+                        id="user-avatar">U</div>
+                    <h1 class="text-lg font-bold tracking-tight">Mis Reuniones</h1>
+                </div>
+                <button id="btn-logout" class="text-xs text-slate-400 hover:text-red-500 transition-colors">Cerrar
+                    sesión</button>
+            </header>
+            <div class="px-4 pt-4">
+                <button id="btn-new-meeting"
+                    class="w-full bg-primary text-white font-semibold text-sm py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[20px]">add</span>
+                    Nueva Reunión
+                </button>
+            </div>
+            <main id="meetings-list" class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+                <div class="text-center text-slate-400 text-sm mt-10">Cargando reuniones...</div>
+            </main>
+        </div>
+
+        <!-- ═══ RECORDING SCREEN ═══ -->
+        <div id="screen-recording" class="flex-1 flex-col hidden">
+            <header class="flex items-center p-4 justify-between border-b border-slate-100 dark:border-slate-800">
+                <button id="btn-back-rec"
+                    class="flex size-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+                    <span class="material-symbols-outlined">arrow_back_ios</span>
+                </button>
+                <h1 class="text-lg font-bold tracking-tight" id="rec-meeting-title">Reunión</h1>
+                <div class="size-10"></div>
+            </header>
+            <main class="flex-1 flex flex-col items-center justify-center gap-6 px-8">
+                <!-- Status -->
+                <div id="rec-status" class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-slate-400">mic</span>
+                    <span class="text-sm text-slate-500">Pulsa para grabar</span>
+                </div>
+                <!-- Timer -->
+                <div id="rec-timer" class="text-5xl font-bold tracking-tight tabular-nums text-slate-300">00:00</div>
+                <!-- Waveform -->
+                <div id="rec-wave" class="flex items-center justify-center gap-1 h-8 text-slate-300"
+                    style="display:none">
+                    <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
+                    <span class="wave-bar"></span><span class="wave-bar"></span>
+                </div>
+                <!-- Record Button -->
+                <button id="btn-record"
+                    class="size-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-all mt-4">
+                    <span class="material-symbols-outlined text-[36px]" id="rec-icon">mic</span>
+                </button>
+                <p id="rec-hint" class="text-xs text-slate-400">Pulsa para empezar a grabar</p>
+                <!-- Upload section (hidden until recording done) -->
+                <div id="rec-upload-section" class="w-full space-y-3 mt-4" style="display:none">
+                    <div class="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-950 rounded-xl">
+                        <span class="material-symbols-outlined text-emerald-600">check_circle</span>
+                        <div>
+                            <p class="text-sm font-medium text-emerald-700">Audio grabado</p>
+                            <p id="rec-duration-info" class="text-xs text-emerald-500"></p>
+                        </div>
+                    </div>
+                    <button id="btn-upload-audio"
+                        class="w-full bg-primary text-white font-semibold text-sm py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">cloud_upload</span>
+                        Subir audio a Drive
+                    </button>
+                    <button id="btn-re-record"
+                        class="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-sm py-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">restart_alt</span>
+                        Grabar de nuevo
+                    </button>
+                    <!-- Progress bar -->
+                    <div id="upload-progress-bar" class="w-full bg-slate-200 rounded-full h-2 overflow-hidden"
+                        style="display:none">
+                        <div id="upload-progress-fill" class="upload-progress bg-primary h-full rounded-full"
+                            style="width:0%"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- ═══ TRANSCRIPT SCREEN ═══ -->
+        <div id="screen-transcript" class="flex-1 flex-col hidden">
+            <header class="flex items-center p-4 justify-between border-b border-slate-100 dark:border-slate-800">
+                <button id="btn-back"
+                    class="flex size-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+                    <span class="material-symbols-outlined">arrow_back_ios</span>
+                </button>
+                <h1 class="text-lg font-bold tracking-tight" id="meeting-title">Reunión</h1>
+                <button
+                    class="flex size-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+                    <span class="material-symbols-outlined text-primary">ios_share</span>
+                </button>
+            </header>
+            <div class="px-4 pt-4 pb-2">
+                <div class="relative group">
+                    <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+                    <input id="search-input"
+                        class="w-full bg-slate-100 dark:bg-slate-900 border-none rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all outline-none"
+                        placeholder="Buscar en la transcripción..." type="text" />
+                </div>
+            </div>
+            <nav class="flex px-4 border-b border-slate-100 dark:border-slate-800" id="tabs-nav">
+                <a class="tab-link flex-1 py-3 text-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                    data-tab="resumen" href="#">Resumen</a>
+                <a class="tab-link flex-1 py-3 text-center text-sm font-bold text-primary border-b-2 border-primary"
+                    data-tab="transcripcion" href="#">Transcripción</a>
+                <a class="tab-link flex-1 py-3 text-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                    data-tab="speakers" href="#">Speakers</a>
+            </nav>
+            <main class="flex-1 overflow-y-auto px-4 py-4 space-y-6" id="transcript-container">
+                <div class="text-center text-slate-500 text-sm mt-10">Cargando transcripción...</div>
+            </main>
+        </div>
+
+        <!-- Bottom Tab Bar -->
+        <nav class="border-t border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 ios-blur flex justify-around pb-8 pt-3 mt-auto"
+            id="bottom-nav">
+            <a class="bottom-tab flex flex-col items-center gap-1 text-primary" data-screen="meetings" href="#">
+                <span class="material-symbols-outlined fill-1">mic</span><span
+                    class="text-[10px] font-medium">Reuniones</span>
+            </a>
+            <a class="bottom-tab flex flex-col items-center gap-1 text-slate-400" data-screen="transcript" href="#">
+                <span class="material-symbols-outlined">description</span><span
+                    class="text-[10px] font-medium">Transcripción</span>
+            </a>
+            <a class="bottom-tab flex flex-col items-center gap-1 text-slate-400" href="#">
+                <span class="material-symbols-outlined">calendar_today</span><span
+                    class="text-[10px] font-medium">Calendario</span>
+            </a>
+            <a class="bottom-tab flex flex-col items-center gap-1 text-slate-400" href="#">
+                <span class="material-symbols-outlined">settings</span><span
+                    class="text-[10px] font-medium">Ajustes</span>
+            </a>
+        </nav>
+
+        <!-- iOS Home Indicator -->
+        <div class="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-slate-300 dark:bg-slate-700 rounded-full">
+        </div>
+    </div>
+
+    <script>
+        // ══════════════════════════════════════
+        // CONFIG
+        // ══════════════════════════════════════
+        // URL del backend en Cloud Run (producción)
+        const API_BASE = window.CONFERENCE_API_URL || 'https://conferenceapp-api-355486498745.europe-west1.run.app/v1';
+        let token = localStorage.getItem('conferenceapp_token');
+        let currentUser = null;
+        let currentMeetingId = null;
+
+        // ── Clock ──
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        setInterval(updateClock, 30000);
+        updateClock();
+
+        // ══════════════════════════════════════
+        // NAVIGATION
+        // ══════════════════════════════════════
+        function showScreen(screenId) {
+            document.querySelectorAll('[id^="screen-"]').forEach(el => { el.classList.add('hidden'); el.classList.remove('flex'); });
+            const screen = document.getElementById(`screen-${screenId}`);
+            if (screen) { screen.classList.remove('hidden'); screen.classList.add('flex', 'fade-in'); }
+
+            // Toggle bottom nav visibility
+            const bottomNav = document.getElementById('bottom-nav');
+            bottomNav.style.display = screenId === 'login' ? 'none' : 'flex';
+        }
+
+        // ══════════════════════════════════════
+        // AUTH
+        // ══════════════════════════════════════
+
+        // Check if returning from Google OAuth with token in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('token')) {
+            token = urlParams.get('token');
+            localStorage.setItem('conferenceapp_token', token);
+            window.history.replaceState({}, '', '/');
+        }
+
+        async function checkAuth() {
+            if (!token) { showScreen('login'); return; }
+
+            try {
+                const res = await fetch(`${API_BASE}/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) throw new Error('Token inválido');
+                const data = await res.json();
+                currentUser = data.user;
+                document.getElementById('user-avatar').textContent = (currentUser.name || 'U').charAt(0).toUpperCase();
+                showScreen('meetings');
+                loadMeetings();
+            } catch {
+                localStorage.removeItem('conferenceapp_token');
+                token = null;
+                showScreen('login');
+            }
+        }
+
+        // ── Google Login ──
+        document.getElementById('btn-google-login').addEventListener('click', () => {
+            window.location.href = `${API_BASE}/auth/login`;
+        });
+
+        // ── Logout ──
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            localStorage.removeItem('conferenceapp_token');
+            token = null;
+            currentUser = null;
+            showScreen('login');
+        });
+
+        // ══════════════════════════════════════
+        // MEETINGS
+        // ══════════════════════════════════════
+        async function loadMeetings() {
+            const container = document.getElementById('meetings-list');
+            try {
+                const res = await fetch(`${API_BASE}/meetings`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+
+                if (!data.items || data.items.length === 0) {
+                    container.innerHTML = '<div class="text-center text-slate-400 text-sm mt-10">No hay reuniones aún. ¡Crea una nueva!</div>';
+                    return;
+                }
+
+                container.innerHTML = data.items.map(m => `
+                    <button onclick="openMeeting('${m.id}')" class="w-full text-left p-4 bg-slate-50 dark:bg-slate-900 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors fade-in">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-sm">${m.title}</h3>
+                                <p class="text-xs text-slate-400 mt-1">${new Date(m.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            </div>
+                            <span class="text-[10px] font-medium px-2 py-1 rounded-full ${m.status === 'READY' ? 'bg-emerald-100 text-emerald-700' :
+                        m.status === 'PROCESSING' ? 'bg-amber-100 text-amber-700' :
+                            'bg-slate-100 text-slate-500'
+                    }">${m.status}</span>
+                        </div>
+                    </button>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = `<div class="text-red-500 text-sm text-center mt-10">Error: ${err.message}</div>`;
+            }
+        }
+
+        // ── New Meeting ──
+        document.getElementById('btn-new-meeting').addEventListener('click', async () => {
+            const title = prompt('Nombre de la reunión:');
+            if (!title) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/meetings`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title })
+                });
+                const meeting = await res.json();
+                openRecording(meeting.id, title);
+            } catch (err) {
+                alert('Error creando reunión: ' + err.message);
+            }
+        });
+
+        // ══════════════════════════════════════
+        // RECORDING
+        // ══════════════════════════════════════
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordedBlob = null;
+        let recInterval = null;
+        let recStartTime = 0;
+        let recMeetingId = null;
+
+        function openRecording(meetingId, title) {
+            recMeetingId = meetingId;
+            currentMeetingId = meetingId;
+            document.getElementById('rec-meeting-title').textContent = title;
+            resetRecordingUI();
+            showScreen('recording');
+        }
+
+        function resetRecordingUI() {
+            recordedBlob = null;
+            audioChunks = [];
+            document.getElementById('rec-timer').textContent = '00:00';
+            document.getElementById('rec-timer').className = 'text-5xl font-bold tracking-tight tabular-nums text-slate-300';
+            document.getElementById('rec-status').innerHTML = '<span class="material-symbols-outlined text-slate-400">mic</span><span class="text-sm text-slate-500">Pulsa para grabar</span>';
+            document.getElementById('rec-icon').textContent = 'mic';
+            document.getElementById('btn-record').className = 'size-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-all mt-4';
+            document.getElementById('rec-wave').style.display = 'none';
+            document.getElementById('rec-upload-section').style.display = 'none';
+            document.getElementById('rec-hint').textContent = 'Pulsa para empezar a grabar';
+            document.getElementById('upload-progress-bar').style.display = 'none';
+            document.getElementById('upload-progress-fill').style.width = '0%';
+        }
+
+        function updateRecTimer() {
+            const elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+            const min = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const sec = String(elapsed % 60).padStart(2, '0');
+            document.getElementById('rec-timer').textContent = `${min}:${sec}`;
+        }
+
+        document.getElementById('btn-record').addEventListener('click', async () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                // STOP recording
+                mediaRecorder.stop();
+                clearInterval(recInterval);
+                document.getElementById('rec-status').innerHTML = '<span class="material-symbols-outlined text-emerald-500">check_circle</span><span class="text-sm text-emerald-600">Grabación completada</span>';
+                document.getElementById('rec-icon').textContent = 'mic';
+                document.getElementById('btn-record').className = 'size-20 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center shadow-lg transition-all mt-4';
+                document.getElementById('rec-wave').style.display = 'none';
+                document.getElementById('rec-hint').textContent = '';
+                return;
+            }
+
+            // START recording
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+
+                mediaRecorder.onstop = () => {
+                    recordedBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    stream.getTracks().forEach(t => t.stop());
+
+                    const elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+                    const min = Math.floor(elapsed / 60);
+                    const sec = elapsed % 60;
+                    document.getElementById('rec-duration-info').textContent = `Duración: ${min}m ${sec}s — ${(recordedBlob.size / 1024 / 1024).toFixed(1)} MB`;
+                    document.getElementById('rec-upload-section').style.display = 'block';
+                };
+
+                mediaRecorder.start(1000);
+                recStartTime = Date.now();
+                recInterval = setInterval(updateRecTimer, 1000);
+
+                document.getElementById('rec-timer').className = 'text-5xl font-bold tracking-tight tabular-nums text-red-500';
+                document.getElementById('rec-status').innerHTML = '<span class="size-3 rounded-full bg-red-500 rec-pulse"></span><span class="text-sm font-medium text-red-500">Grabando...</span>';
+                document.getElementById('rec-icon').textContent = 'stop';
+                document.getElementById('btn-record').className = 'size-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-all mt-4 rec-pulse';
+                document.getElementById('rec-wave').style.display = 'flex';
+                document.getElementById('rec-wave').className = 'flex items-center justify-center gap-1 h-8 text-red-400';
+                document.getElementById('rec-hint').textContent = 'Pulsa para detener';
+            } catch (err) {
+                alert('No se pudo acceder al micrófono: ' + err.message);
+            }
+        });
+
+        // Re-record
+        document.getElementById('btn-re-record').addEventListener('click', () => {
+            resetRecordingUI();
+        });
+
+        // Upload audio
+        document.getElementById('btn-upload-audio').addEventListener('click', async () => {
+            if (!recordedBlob || !recMeetingId) return;
+
+            const btn = document.getElementById('btn-upload-audio');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">progress_activity</span> Subiendo...';
+            document.getElementById('upload-progress-bar').style.display = 'block';
+            document.getElementById('upload-progress-fill').style.width = '30%';
+
+            try {
+                const formData = new FormData();
+                formData.append('audio', recordedBlob, 'recording.webm');
+
+                document.getElementById('upload-progress-fill').style.width = '60%';
+
+                const res = await fetch(`${API_BASE}/meetings/${recMeetingId}/audio:complete`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                document.getElementById('upload-progress-fill').style.width = '100%';
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error_message || 'Error subiendo audio');
+                }
+
+                btn.innerHTML = '<span class="material-symbols-outlined text-[20px]">check</span> ¡Subido!';
+                btn.className = btn.className.replace('bg-primary', 'bg-emerald-500');
+
+                setTimeout(() => {
+                    showScreen('meetings');
+                    loadMeetings();
+                }, 1500);
+            } catch (err) {
+                alert('Error subiendo audio: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined text-[20px]">cloud_upload</span> Reintentar subida';
+            }
+        });
+
+        // Back from recording
+        document.getElementById('btn-back-rec').addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                clearInterval(recInterval);
+            }
+            showScreen('meetings');
+            loadMeetings();
+        });
+
+        // ══════════════════════════════════════
+        // TRANSCRIPT
+        // ══════════════════════════════════════
+        async function openMeeting(meetingId) {
+            currentMeetingId = meetingId;
+
+            try {
+                const meetRes = await fetch(`${API_BASE}/meetings/${meetingId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const meeting = await meetRes.json();
+
+                // Si la reunión aún no tiene audio, ir a pantalla de grabación
+                if (meeting.status === 'DRAFT' && !meeting.audio_drive_file_id) {
+                    openRecording(meetingId, meeting.title);
+                    return;
+                }
+
+                // Si ya tiene audio, mostrar transcripción
+                showScreen('transcript');
+                document.getElementById('meeting-title').textContent = meeting.title;
+
+                const transRes = await fetch(`${API_BASE}/meetings/${meetingId}/transcript`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const transData = await transRes.json();
+                renderTranscript(transData.segments);
+            } catch (err) {
+                document.getElementById('transcript-container').innerHTML = `<div class="text-red-500 text-sm text-center mt-10">Error: ${err.message}</div>`;
+            }
+        }
+
+        function renderTranscript(segments) {
+            const container = document.getElementById('transcript-container');
+            if (!segments || segments.length === 0) {
+                container.innerHTML = '<div class="text-slate-500 text-center mt-10">No hay transcripciones disponibles.</div>';
+                return;
+            }
+
+            const speakerColors = ['bg-primary', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-500'];
+
+            container.innerHTML = segments.map((seg, i) => {
+                const initial = (seg.speaker_name || 'X').charAt(0).toUpperCase();
+                const ms = seg.start_ms || 0;
+                const timeStr = new Date(ms).toISOString().substr(11, 8);
+                const color = speakerColors[i % speakerColors.length];
+                const isFirst = i === 0;
+                const wrap = isFirst
+                    ? 'group relative bg-primary/5 -mx-4 px-4 py-4 border-l-4 border-primary'
+                    : 'group px-0 py-2';
+
+                return `<div class="${wrap} fade-in">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center justify-center size-8 rounded-full ${color} text-white text-xs font-bold">${initial}</div>
+                            <span class="font-semibold text-sm">${seg.speaker_name} (${seg.speaker_label})</span>
+                            <span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">${timeStr}</span>
+                        </div>
+                    </div>
+                    <p class="text-sm leading-relaxed text-slate-700 dark:text-slate-300">${seg.text}</p>
+                </div>`;
+            }).join('');
+        }
+
+        // ── Back button ──
+        document.getElementById('btn-back').addEventListener('click', () => {
+            showScreen('meetings');
+            loadMeetings();
+        });
+
+        // ── Tabs ──
+        document.querySelectorAll('.tab-link').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.tab-link').forEach(t => {
+                    t.className = 'tab-link flex-1 py-3 text-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors';
+                });
+                tab.className = 'tab-link flex-1 py-3 text-center text-sm font-bold text-primary border-b-2 border-primary';
+
+                const container = document.getElementById('transcript-container');
+                if (tab.dataset.tab === 'transcripcion' && currentMeetingId) {
+                    openMeeting(currentMeetingId);
+                } else {
+                    container.innerHTML = `<div class="text-slate-500 text-center mt-10">Vista de ${tab.textContent} — próximamente.</div>`;
+                }
+            });
+        });
+
+        // ── Bottom tabs ──
+        document.querySelectorAll('.bottom-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.bottom-tab').forEach(t => {
+                    t.className = 'bottom-tab flex flex-col items-center gap-1 text-slate-400';
+                    t.querySelector('.material-symbols-outlined').classList.remove('fill-1');
+                });
+                tab.className = 'bottom-tab flex flex-col items-center gap-1 text-primary';
+                tab.querySelector('.material-symbols-outlined').classList.add('fill-1');
+
+                if (tab.dataset.screen === 'meetings') { showScreen('meetings'); loadMeetings(); }
+            });
+        });
+
+        // ══════════════════════════════════════
+        // PWA Registration
+        // ══════════════════════════════════════
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').then(() => {
+                console.log('Service Worker registrado');
+            });
+        }
+
+        // ── Init ──
+        checkAuth();
+    </script>
+</body>
+
+</html>
