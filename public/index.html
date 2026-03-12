@@ -709,8 +709,8 @@
                 <span class="text-[10px] font-bold">Grabadora</span>
             </button>
             <button
-                class="nav-btn flex flex-col items-center gap-1 w-16 text-slate-400 hover:text-primary transition-colors cursor-not-allowed opacity-50">
-                <!-- Pestaña Actas a futuro -->
+                class="nav-btn flex flex-col items-center gap-1 w-16 text-slate-400 hover:text-primary transition-colors"
+                data-target="screen-meeting-detail" id="nav-item-actas">
                 <span class="material-symbols-outlined" id="nav-icon-actas">description</span>
                 <span class="text-[10px] font-bold">Actas</span>
             </button>
@@ -954,7 +954,7 @@
         // Detect current environment to set API_BASE
         const isProd = window.location.hostname !== 'localhost';
         const defaultApi = isProd
-            ? 'https://conferenceapp-api-355486498745.europe-west1.run.app/v1'
+            ? 'https://conferenceapp-api-x3lku7o7ra-ew.a.run.app/v1'
             : 'http://localhost:3000/v1';
 
         const API_BASE = localStorage.getItem('conference_api_base') || defaultApi;
@@ -1173,7 +1173,8 @@
                     </div>`;
                 }).join('');
             } catch (err) {
-                list.innerHTML = `<div class="text-center text-red-500 mt-10">Error al cargar reuniones</div>`;
+                console.error("Error cargando reuniones:", err);
+                list.innerHTML = `<div class="text-center text-red-500 mt-10">Error al cargar reuniones: ${err.message}</div>`;
             }
         }
 

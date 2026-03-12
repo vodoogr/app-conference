@@ -16,11 +16,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ── CORS ──
-const rawOrigins = process.env.ALLOWED_ORIGINS || '*';
-const allowedOrigins = rawOrigins === '*' ? true : rawOrigins.split(',').map(o => o.trim());
-
 app.use(cors({
-  origin: allowedOrigins,
+  origin: '*',
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT', 'OPTIONS'],
   allowedHeaders: ['Authorization', 'Content-Type', 'X-Request-Id'],
 }));
