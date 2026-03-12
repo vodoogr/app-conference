@@ -387,7 +387,7 @@
                     <button id="btn-upload-audio"
                         class="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-primary text-white font-bold shadow-lg hover:opacity-90 active:scale-95 transition-all">
                         <span class="material-symbols-outlined">cloud_upload</span>
-                        Procesar Acta Médica
+                        Procesar Acta Reunión
                     </button>
                     <button id="btn-re-record"
                         class="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
@@ -1405,8 +1405,18 @@
                 return;
             }
             if (!recMeetingId) {
-                alert("Error: Falta ID de la reunión.");
-                return;
+                try {
+                    const res = await fetch(`${API_BASE}/meetings`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ title: 'Grabación rápida ' + new Date().toLocaleDateString() })
+                    });
+                    const data = await res.json();
+                    recMeetingId = data.id;
+                } catch (err) {
+                    alert('Error creando reunión automática: ' + err.message);
+                    return;
+                }
             }
 
             console.log("Mostrando processing screen...");
