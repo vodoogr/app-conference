@@ -951,7 +951,14 @@
     <!-- Global Layout Wrapper Ends -->
 
     <script>
-        const API_BASE = localStorage.getItem('conference_api_base') || 'https://conferenceapp-api-355486498745.europe-west1.run.app/v1';
+        // Detect current environment to set API_BASE
+        const isProd = window.location.hostname !== 'localhost';
+        const defaultApi = isProd
+            ? 'https://conferenceapp-api-355486498745.europe-west1.run.app/v1'
+            : 'http://localhost:3000/v1';
+
+        const API_BASE = localStorage.getItem('conference_api_base') || defaultApi;
+        console.log("Using API_BASE:", API_BASE);
         let token = localStorage.getItem('conference_token');
         let currentUser = null;
 
@@ -1471,7 +1478,8 @@
 
             try {
                 const formData = new FormData();
-                formData.append('audio', recordedBlob, 'recording.webm');
+                const uploadName = recordedBlob.name || 'recording.webm';
+                formData.append('audio', recordedBlob, uploadName);
 
                 // Simulate progress during upload fetch
                 setTimeout(() => { setProgress(30); }, 500);
@@ -1511,7 +1519,7 @@
                 }, 2500);
 
                 setTimeout(() => {
-                    openMeetingRouter(recMeetingId); // Open details
+                    openMeetingDetail(recMeetingId, { title: 'Tu acta generada', status: 'READY' });
                 }, 3500);
 
             } catch (err) {
