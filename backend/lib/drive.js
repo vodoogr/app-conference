@@ -163,10 +163,40 @@ async function deleteFile(refreshToken, fileId) {
     await drive.files.delete({ fileId });
 }
 
+/**
+ * Sube un archivo PDF al Drive del usuario.
+ * @param {string} refreshToken
+ * @param {Buffer} pdfBuffer - El contenido del PDF
+ * @param {string} fileName - Nombre del archivo (ej: "Acta_Reunion.pdf")
+ * @param {string} actasFolderId - ID de la carpeta Actas en Drive
+ * @returns {Promise<{ fileId, webViewLink }>}
+ */
+async function uploadPDF(refreshToken, pdfBuffer, fileName, actasFolderId) {
+    const drive = getDriveClient(refreshToken);
+
+    const bufferStream = new stream.PassThrough();
+    bufferStream.end(pdfBuffer);
+
+    const { data } = await drive.files.create({
+        requestBody: {
+            name: fileName,
+            parents: [actasFolderId],
+        },
+        media: {
+            mimeType: 'application/pdf',
+            body: bufferStream,
+        },
+        fields: 'id, webViewLink',
+    });
+
+    return { fileId: data.id, webViewLink: data.webViewLink };
+}
+
 module.exports = {
     initDriveFolders,
     uploadAudio,
     uploadMinutes,
+    uploadPDF,
     getDownloadUrl,
     deleteFile,
 };

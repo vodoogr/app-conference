@@ -48,7 +48,7 @@ async function processAudioAndGenerateMinutes(geminiFile) {
     if (!ai) {
         return {
             transcriptSegments: [{ speaker_label: 'speaker_1', text: 'Transcripción simulada porque GEMINI_API_KEY no está configurada.', start_ms: 0, end_ms: 5000 }],
-            minutesMarkdown: '# Acta Generada\\n\\nSimulación de acta\\n\\n## Puntos Clave\\n- Configurar GEMINI_API_KEY en backend'
+            minutesMarkdown: '# Acta Generada\n\nSimulación de acta\n\n## Puntos Clave\n- Configurar GEMINI_API_KEY en backend'
         };
     }
 
@@ -62,35 +62,43 @@ Debes escuchar el audio atentamente, identificar a los diferentes hablantes (spe
   "transcript": [
     { "speaker_label": "speaker_X", "text": "texto exacto de lo que dice", "start_ms": 1200, "end_ms": 4500 }
   ],
-  "minutes_md": "# Acta de la reunión\\n\\n## Resumen Ejecutivo\\n...\\n\\n## Decisiones\\n...\\n\\n## Tareas\\n- [ ] ..."
+  "minutes_md": "# Acta de la reunión\\n\\n## Resumen Ejecutivo\\n...\\n\\n## Puntos Clave\\n...\\n\\n## Decisiones\\n...\\n\\n## Tareas\\n- [ ] ..."
 }
 \`\`\`
 
-REGLAS PARA EL JSON:
+REGLAS CRÍTICAS:
 1. No incluyas nada más fuera del JSON. La respuesta debe ser parseable por \`JSON.parse()\`.
-2. Para \`start_ms\` y \`end_ms\`, estima en milisegundos cuando habla cada persona (puedes aproximar).
-3. \`minutes_md\` DEBE estar en formato Markdown puro usando strings escapados de \`\\n\`.
-4. El Acta (minutes) debe ser altamente profesional y estructurada:
-   - Resumen Ejecutivo (párrafo corto)
-   - Discusión Detallada / Puntos Clave
-   - Decisiones Acordadas
-   - Tareas y Personas Responsables
+2. Para \`start_ms\` y \`end_ms\`, estima en milisegundos cuando habla cada persona.
+3. El acta (\`minutes_md\`) DEBE ser profesional, estar en español y seguir esta estructura:
+   - Resumen Ejecutivo (párrafo conciso).
+   - Puntos Clave (lista con lo más relevante).
+   - Decisiones Acordadas.
+   - Tareas y Personas Responsables (formato lista de tareas Markdown).
+4. El acta debe ser un resumen ejecutivo útil, no una transcripción literal.
 `.trim();
 
     console.log('Solicitando procesamiento de audio a Gemini...');
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-            { role: 'user', parts: [{ fileData: { fileUri: geminiFile.uri, mimeType: geminiFile.mimeType } }] }
-        ],
-        config: {
-            systemInstruction: { role: 'system', parts: [{ text: systemInstruction }] },
-            responseMimeType: 'application/json',
-            temperature: 0.2
-        }
+    const model = ai.getGenerativeModel({
+        model: 'gemini-1.5-flash',
+        systemInstruction: systemInstruction
     });
 
-    const respText = response.text;
+    const result = await model.generateContent([
+        {
+            fileData: {
+                mimeType: geminiFile.mimeType,
+                fileUri: geminiFile.uri
+            }
+        },
+        { text: "Procesa esta reunión y devuelve el JSON solicitado." }
+    ]);
+
+    const response = await result.response;
+    let respText = response.text();
+
+    // Limpiar posibles bloques de código markdown
+    respText = respText.replace(/```json|```/g, '').trim();
+
     try {
         const data = JSON.parse(respText);
         return {
@@ -98,7 +106,7 @@ REGLAS PARA EL JSON:
             minutesMarkdown: data.minutes_md || '# Error leyendo el acta de la IA'
         };
     } catch (e) {
-        console.error('Error parseando JSON de Gemini:', e, '\\nTexto recibido:', respText);
+        console.error('Error parseando JSON de Gemini:', e, '\nTexto recibido:', respText);
         throw new Error('La respuesta de Gemini no es un JSON válido');
     }
 }
@@ -112,12 +120,12 @@ REGLAS PARA EL JSON:
 async function chatWithAssistant(prompt, transcriptSegments) {
     if (!ai) return '*Respuesta simulada:* El bot responderá aquí cuando GEMINI_API_KEY esté configurada.';
 
-    const contextText = transcriptSegments.map(seg => `[${seg.speaker_name || seg.speaker_label}]: ${seg.text}`).join('\\n');
+    const contextText = transcriptSegments.map(seg => `[${seg.speaker_name || seg.speaker_label}]: ${seg.text}`).join('\n');
 
     const systemInstruction = `
 Eres un Asistente de Inteligencia Artificial integrado en una aplicación de Actas de Reunión.
 El usuario te hará preguntas sobre la reunión actual basándose en la transcripción proporcionada.
-Responde de forma concisa, educada y en formato Markdown (permitido listas, negritas).
+Responde de forma concisa, educada y en español, usando formato Markdown (listas, negritas, etc.).
 
 Aquí está la transcripción de la reunión como contexto:
 ---
@@ -126,15 +134,14 @@ ${contextText}
 `.trim();
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                systemInstruction: { role: 'system', parts: [{ text: systemInstruction }] },
-                temperature: 0.3
-            }
+        const model = ai.getGenerativeModel({
+            model: 'gemini-1.5-flash',
+            systemInstruction: systemInstruction
         });
-        return response.text;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        return response.text();
     } catch (error) {
         console.error('Error en Asistente IA:', error);
         return '*Ocurrió un error al contactar con la IA.*';

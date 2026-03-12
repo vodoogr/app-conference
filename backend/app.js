@@ -335,9 +335,70 @@ v1.post('/minutes/:minutes_id/finalize', verifyToken, async (req, res) => {
 
 // ── Export ──
 v1.post('/minutes/:minutes_id/export', verifyToken, async (req, res) => {
-  const format = req.query.format || 'pdf';
-  const exportRecord = await db.createExport(req.params.minutes_id, format);
-  res.json({ export_id: exportRecord.id });
+  try {
+    const { minutes_id } = req.params;
+    const format = req.query.format || 'pdf';
+
+    // 1. Obtener datos
+    const minutes = await db.getMinutes(minutes_id);
+    if (!minutes) return res.status(404).json({ error_message: 'Acta no encontrada' });
+
+    const meeting = await db.getMeetingById(minutes.meeting_id);
+    const user = await db.getUserById(req.user.userId);
+
+    // 2. Crear registro de exportación
+    const exportRecord = await db.createExport(minutes_id, format);
+
+    if (format === 'pdf') {
+      // PROCESO ASYNC: Generar PDF y subir a Drive
+      (async () => {
+        try {
+          const PDFDocument = require('pdfkit');
+          const doc = new PDFDocument({ margin: 50 });
+          let chunks = [];
+          doc.on('data', chunk => chunks.push(chunk));
+
+          // Diseño del PDF básico
+          doc.fontSize(20).text('Acta de Reunión', { align: 'center' });
+          doc.moveDown();
+          doc.fontSize(14).text(`Título: ${meeting.title}`);
+          doc.fontSize(12).text(`Fecha: ${new Date(meeting.created_at).toLocaleDateString()}`);
+          doc.moveDown();
+          doc.fontSize(10).text(minutes.content_md, { lineGap: 5 });
+
+          doc.end();
+
+          doc.on('end', async () => {
+            try {
+              const pdfBuffer = Buffer.concat(chunks);
+              const folders = await initDriveFolders(user.google_refresh_token);
+              const fileName = `Acta_${meeting.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+
+              const driveResult = await uploadPDF(user.google_refresh_token, pdfBuffer, fileName, folders.actasFolderId);
+
+              await db.updateExport(exportRecord.id, {
+                status: 'READY',
+                drive_file_id: driveResult.fileId,
+                download_url: driveResult.webViewLink
+              });
+              console.log(`✓ PDF Exportado y subido para acta ${minutes_id}`);
+            } catch (pErr) {
+              console.error('Error subiendo PDF final:', pErr);
+              await db.updateExport(exportRecord.id, { status: 'FAILED' });
+            }
+          });
+        } catch (err) {
+          console.error('Error generando PDF:', err);
+          await db.updateExport(exportRecord.id, { status: 'FAILED' });
+        }
+      })();
+    }
+
+    res.json({ export_id: exportRecord.id, status: 'PROCESSING' });
+  } catch (error) {
+    console.error('Error iniciando export:', error);
+    res.status(500).json({ error_message: 'Error al iniciar la exportación' });
+  }
 });
 
 v1.get('/exports/:id', verifyToken, async (req, res) => {
