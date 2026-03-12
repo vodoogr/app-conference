@@ -957,7 +957,14 @@
             ? 'https://conferenceapp-api-x3lku7o7ra-ew.a.run.app/v1'
             : 'http://localhost:3000/v1';
 
-        const API_BASE = localStorage.getItem('conference_api_base') || defaultApi;
+        // MIGRATION: If the saved API is the old wrong one or empty, force defaultApi
+        let savedApi = localStorage.getItem('conference_api_base');
+        if (savedApi && (savedApi.includes('355486498745') || savedApi === '')) {
+            localStorage.removeItem('conference_api_base');
+            savedApi = null;
+        }
+
+        const API_BASE = savedApi || defaultApi;
         console.log("Using API_BASE:", API_BASE);
         let token = localStorage.getItem('conference_token');
         let currentUser = null;
@@ -1328,7 +1335,19 @@
             // START recording
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+
+                // Compatibility check for mimeTypes (important for Safari/iOS)
+                const mimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/aac'];
+                let chosenMime = '';
+                for (const mime of mimeTypes) {
+                    if (MediaRecorder.isTypeSupported(mime)) {
+                        chosenMime = mime;
+                        break;
+                    }
+                }
+
+                console.log("Chosen MimeType:", chosenMime);
+                mediaRecorder = new MediaRecorder(stream, chosenMime ? { mimeType: chosenMime } : {});
                 audioChunks = [];
 
                 mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
@@ -1477,56 +1496,64 @@
             setStepState(1, 'active', 'Subiendo archivo', 'Enviando al servidor...');
             setStepState(2, 'pending'); setStepState(3, 'pending'); setStepState(4, 'pending');
 
-            try {
-                const formData = new FormData();
-                const uploadName = recordedBlob.name || 'recording.webm';
-                formData.append('audio', recordedBlob, uploadName);
+            const formData = new FormData();
+            // Ensure we have a valid file name and type
+            let uploadName = recordedBlob.name || 'recording.webm';
+            let uploadType = recordedBlob.type || 'audio/webm';
 
-                // Simulate progress during upload fetch
-                setTimeout(() => { setProgress(30); }, 500);
-
-                const res = await fetch(`${API_BASE}/meetings/${recMeetingId}/audio:complete`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error_message || 'Error subiendo audio');
-                }
-
-                setProgress(50);
-                setStepState(1, 'done', 'Audio subido', 'Archivo procesado correctamente');
-
-                // Simulate Transcription UI
-                document.getElementById('processing-title').textContent = 'Transcribiendo...';
-                document.getElementById('processing-subtitle').textContent = 'Estamos convirtiendo tu audio en texto rápido.';
-                setStepState(2, 'active', 'Transcribiendo audio', 'Identificando locutores...');
-
-                setTimeout(() => {
-                    setProgress(80);
-                    setStepState(2, 'done', 'Transcripción lista', 'Texto generado');
-                    setStepState(3, 'active', 'Generando acta', 'Extrayendo puntos clave...');
-                    document.getElementById('processing-title').textContent = 'Generando Acta...';
-                }, 1500);
-
-                setTimeout(() => {
-                    setProgress(100);
-                    setStepState(3, 'done', 'Acta generada', 'Resumen listo');
-                    setStepState(4, 'done', 'Exportación lista', 'Guardado en Drive');
-                    document.getElementById('processing-title').textContent = '¡Todo listo!';
-                    document.getElementById('processing-subtitle').textContent = 'Redirigiendo a tu acta...';
-                }, 2500);
-
-                setTimeout(() => {
-                    openMeetingDetail(recMeetingId, { title: 'Tu acta generada', status: 'READY' });
-                }, 3500);
-
-            } catch (err) {
-                alert('Error de conexión al subir: ' + err.message);
-                showScreen('recording'); // back to try again
+            // If it's a blob from recorder (no name), ensure extension matches type
+            if (!recordedBlob.name) {
+                const ext = uploadType.includes('mp4') ? 'm4a' : (uploadType.includes('webm') ? 'webm' : 'ogg');
+                uploadName = `recording_${Date.now()}.${ext}`;
             }
+
+            formData.append('audio', recordedBlob, uploadName);
+
+            // Simulate progress during upload fetch
+            setTimeout(() => { setProgress(30); }, 500);
+
+            const res = await fetch(`${API_BASE}/meetings/${recMeetingId}/audio:complete`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error_message || 'Error subiendo audio');
+            }
+
+            setProgress(50);
+            setStepState(1, 'done', 'Audio subido', 'Archivo procesado correctamente');
+
+            // Simulate Transcription UI
+            document.getElementById('processing-title').textContent = 'Transcribiendo...';
+            document.getElementById('processing-subtitle').textContent = 'Estamos convirtiendo tu audio en texto rápido.';
+            setStepState(2, 'active', 'Transcribiendo audio', 'Identificando locutores...');
+
+            setTimeout(() => {
+                setProgress(80);
+                setStepState(2, 'done', 'Transcripción lista', 'Texto generado');
+                setStepState(3, 'active', 'Generando acta', 'Extrayendo puntos clave...');
+                document.getElementById('processing-title').textContent = 'Generando Acta...';
+            }, 1500);
+
+            setTimeout(() => {
+                setProgress(100);
+                setStepState(3, 'done', 'Acta generada', 'Resumen listo');
+                setStepState(4, 'done', 'Exportación lista', 'Guardado en Drive');
+                document.getElementById('processing-title').textContent = '¡Todo listo!';
+                document.getElementById('processing-subtitle').textContent = 'Redirigiendo a tu acta...';
+            }, 2500);
+
+            setTimeout(() => {
+                openMeetingDetail(recMeetingId, { title: 'Tu acta generada', status: 'READY' });
+            }, 3500);
+
+        } catch (err) {
+            alert('Error de conexión al subir: ' + err.message);
+            showScreen('recording'); // back to try again
+        }
         });
 
         // ══════════════════════════════════════
