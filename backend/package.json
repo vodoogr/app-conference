@@ -8,8 +8,12 @@
     "dev": "node --watch app.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@supabase/supabase-js": "^2.48.1",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "googleapis": "^144.0.0",
     "jsonwebtoken": "^9.0.2"
   }
 }
