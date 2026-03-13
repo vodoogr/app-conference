@@ -9,6 +9,6 @@ echo.
 echo  🚀 Creando Tunel Estable con Cloudflare...
 echo.
 
-:: Corregido: El paquete en npm es 'cloudflared' (sin el @cloudflare/)
-call "%NODE_DIR%\npm.cmd" exec -- cloudflared tunnel --url http://localhost:3000
+:: Corregido: Usar -y para no preguntar confirmación y asegurar que corre
+call "%NODE_DIR%\npx.cmd" -y cloudflared tunnel --url http://localhost:3000
 pause

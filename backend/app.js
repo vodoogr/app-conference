@@ -10,13 +10,21 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_super_seguro';
 
-// 1. Configuración de CORS
+// 1. Configuración de CORS con soporte para Redes Privadas (PNA)
 app.use(cors({
-  origin: true, // Permite cualquier origen que haga la petición (ideal para pruebas con Stitch)
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT', 'OPTIONS'],
-  allowedHeaders: ['Authorization', 'Content-Type', 'X-Request-Id']
+  allowedHeaders: ['Authorization', 'Content-Type', 'X-Request-Id', 'Access-Control-Allow-Private-Network']
 }));
+
+// Middleware específico para el error de "Red Local" de Chrome (PNA)
+app.use((req, res, next) => {
+  if (req.headers['access-control-request-private-network']) {
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  }
+  next();
+});
 
 app.use(express.json());
 
