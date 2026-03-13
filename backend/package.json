@@ -1,13 +1,14 @@
 {
   "name": "conference-app-backend",
   "version": "1.0.0",
-  "description": "API Backend para ConferenceApp",
+  "description": "API Backend para ConferenceApp - Producción",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
     "dev": "node --watch app.js"
   },
   "dependencies": {
+<<<<<<< HEAD
     "@google/generative-ai": "^0.21.0",
     "@supabase/supabase-js": "^2.48.1",
     "cors": "^2.8.5",
@@ -15,5 +16,18 @@
     "express": "^4.21.2",
     "googleapis": "^144.0.0",
     "jsonwebtoken": "^9.0.2"
+=======
+    "@google/genai": "^1.44.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "google-auth-library": "^9.14.0",
+    "googleapis": "^140.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "markdown-it": "^14.1.1",
+    "multer": "^2.1.1",
+    "pdfkit": "^0.17.2"
+>>>>>>> 9bb6e534fcc749e2ce0794be12d63b0253b9d50e
   }
 }

@@ -1,0 +1,10 @@
+{
+    "name": "conferenceapp",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "dev": "cd backend && npm run dev",
+        "install-backend": "cd backend && npm install",
+        "vercel-build": "cd backend && npm install"
+    }
+}
