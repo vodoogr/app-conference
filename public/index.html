@@ -7,12 +7,14 @@
     <title>ConferenceApp - Voice Minutes</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet" />
+    <!-- Google Fonts: Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <!-- Google Material Symbols -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
+    <!-- Premium Design System -->
+    <link rel="stylesheet" href="premium.css">
 
     <script id="tailwind-config">
         tailwind.config = {
@@ -38,7 +40,7 @@
     </script>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Outfit', sans-serif;
             -webkit-tap-highlight-color: transparent;
             min-height: 100dvh;
         }
@@ -133,10 +135,18 @@
         <!-- SCREEN: SPLASH / LOGIN                     -->
         <!-- ========================================== -->
         <div id="screen-login"
-            class="screen active relative flex min-h-screen w-full flex-col items-center justify-between pb-10">
-            <div class="h-20 w-full"></div>
-            <!-- Central Branding Section -->
-            <div class="flex flex-col items-center justify-center space-y-8 animate-fade-in z-10 w-full px-8">
+            class="screen active relative flex min-h-screen w-full flex-col items-center justify-center pb-10 overflow-hidden bg-slate-50 dark:bg-slate-950">
+
+            <!-- Premium Background Blobs -->
+            <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+                <div class="absolute -top-20 -left-20 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] animate-pulse">
+                </div>
+                <div class="absolute top-1/2 -right-20 w-64 h-64 bg-indigo-600/10 rounded-full blur-[80px]"></div>
+            </div>
+
+            <!-- Central Card (Glass) -->
+            <div
+                class="glass relative z-10 w-[90%] max-w-sm p-8 rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-white/5 flex flex-col items-center text-center">
                 <!-- Stylized Microphone/Waveform Logo -->
                 <div class="relative flex items-center justify-center w-24 h-24 bg-primary/10 rounded-full mb-4">
                     <div class="absolute inset-0 bg-primary/5 rounded-full blur-xl"></div>
@@ -161,9 +171,9 @@
                 </div>
 
                 <!-- LOGIN BUTTON -->
-                <div id="login-container" class="w-full mt-12" style="display: none;">
+                <div id="login-container" class="w-full mt-10" style="display: none;">
                     <button id="btn-login-google"
-                        class="w-full flex items-center justify-center gap-3 bg-white dark:bg-white text-slate-700 font-semibold py-4 px-6 rounded-xl shadow-lg border border-slate-200 hover:shadow-xl transition-all">
+                        class="w-full flex items-center justify-center gap-3 bg-white text-slate-900 font-bold py-4 px-6 rounded-2xl shadow-premium border border-white/50 hover:bg-slate-50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">
                         <svg class="w-5 h-5" viewBox="0 0 24 24">
                             <path fill="#4285F4"
                                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -176,8 +186,9 @@
                         </svg>
                         Acceder con Google
                     </button>
-                    <p class="text-center text-[10px] text-slate-400 mt-4 px-4 font-medium leading-relaxed">Al entrar,
-                        aceptas permitir guardar audios y conectar con tu Google Drive.</p>
+                    <p
+                        class="text-[10px] text-slate-400 mt-6 px-4 font-medium uppercase tracking-widest leading-relaxed">
+                        Conexión segura con Google Drive</p>
                 </div>
             </div>
 
@@ -276,24 +287,22 @@
 
             <!-- Main Content -->
             <main class="flex-1 flex flex-col items-center px-5 py-6 overflow-y-auto">
-                <!-- Recording Status Indicator -->
-                <div class="flex flex-col items-center gap-5 mt-2 mb-8">
-                    <div class="relative flex items-center justify-center w-32 h-32" id="rec-hero-mic">
-                        <div class="absolute inset-0 bg-red-500/10 rounded-full scale-[1.3] rec-pulse hidden"
-                            id="rec-hero-pulse"></div>
-                        <div class="absolute inset-2 bg-red-500/15 rounded-full scale-[1.1] rec-pulse hidden"
-                            id="rec-hero-pulse-2" style="animation-delay: 0.2s"></div>
-                        <div class="relative w-[72px] h-[72px] bg-slate-300 dark:bg-slate-800 text-slate-50 dark:text-slate-600 rounded-full flex items-center justify-center shadow-lg transition-colors z-10"
-                            id="rec-hero-circle">
-                            <span class="material-symbols-outlined text-3xl" id="rec-hero-icon"
-                                style="font-variation-settings: 'FILL' 1;">mic</span>
+                <!-- Premium Recording Trigger -->
+                <div class="flex flex-col items-center justify-center mt-10 mb-12">
+                    <button id="btn-record-main" class="recorder-circle group relative outline-none border-none">
+                        <div class="recorder-wave" id="rec-wave-1"></div>
+                        <div class="recorder-wave" id="rec-wave-2" style="animation-delay: 0.5s"></div>
+                        <div
+                            class="relative z-10 size-20 bg-white rounded-full flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform duration-300">
+                            <span class="material-symbols-outlined text-4xl text-royal-blue fill-1"
+                                id="rec-icon">mic</span>
                         </div>
-                    </div>
-                    <div class="flex flex-col items-center justify-center text-center">
-                        <h2 class="text-slate-900 dark:text-slate-100 text-[26px] font-bold leading-tight mb-1 tracking-tight"
-                            id="rec-status-text">Listo</h2>
-                        <p class="text-slate-500 dark:text-slate-400 text-[13px] font-medium tracking-tight"
-                            id="rec-meeting-title">Pulsa en grabar</p>
+                    </button>
+                    <div class="mt-8 text-center">
+                        <h2 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2"
+                            id="rec-status-text">Listo para Grabar</h2>
+                        <p class="text-xs uppercase tracking-[0.2em] font-bold text-slate-400" id="rec-meeting-title">
+                            Pulsa el círculo para comenzar</p>
                     </div>
                 </div>
 
@@ -973,35 +982,40 @@
         // MAIN NAVIGATION & STATE
         // ══════════════════════════════════════
         function showScreen(screenId) {
+            console.log("Switching to screen:", screenId);
             document.querySelectorAll('.screen').forEach(s => {
                 s.classList.remove('active');
                 s.classList.add('hidden');
             });
-            // Remove hide from modal
-            document.getElementById(`screen-${screenId}`).classList.remove('hidden');
-            document.getElementById(`screen-${screenId}`).classList.add('active');
+            const target = document.getElementById(`screen-${screenId}`);
+            if (target) {
+                target.classList.remove('hidden');
+                target.classList.add('active');
+            }
             window.scrollTo(0, 0);
 
-            // Hide or show bottom nav based on screen
+            // Premium Navigation Logic
             const nav = document.getElementById('global-bottom-nav');
-            if (['meetings', 'recording', 'settings', 'meeting-detail'].includes(screenId)) {
+            const mainScreens = ['meetings', 'recording', 'settings'];
+
+            if (mainScreens.includes(screenId) || screenId === 'meeting-detail') {
                 nav.classList.remove('translate-y-[200%]');
-                // Reset colors:
-                ['meetings', 'recording', 'settings'].forEach(id => {
-                    if (document.getElementById(`nav-item-${id}`)) {
-                        document.getElementById(`nav-item-${id}`).classList.remove('text-primary');
-                        document.getElementById(`nav-item-${id}`).classList.add('text-slate-400');
-                        document.getElementById(`nav-icon-${id}`).classList.remove('font-variation-fill');
-                    }
+                // Reset nav items
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    const icon = btn.querySelector('.material-symbols-outlined');
+                    btn.classList.remove('text-primary');
+                    btn.classList.add('text-slate-400');
+                    if (icon) icon.classList.remove('fill-1');
                 });
 
-                // Color active:
-                let activeId = screenId;
-                if (screenId === 'meeting-detail') activeId = 'meetings'; // Acta relies on Meetings flow for now
-                if (document.getElementById(`nav-item-${activeId}`)) {
-                    document.getElementById(`nav-item-${activeId}`).classList.add('text-primary');
-                    document.getElementById(`nav-item-${activeId}`).classList.remove('text-slate-400');
-                    document.getElementById(`nav-icon-${activeId}`).classList.add('font-variation-fill');
+                // Set active item
+                let activeId = screenId === 'meeting-detail' ? 'meetings' : screenId;
+                const activeBtn = document.querySelector(`.nav-btn[data-target="screen-${activeId}"]`);
+                if (activeBtn) {
+                    activeBtn.classList.add('text-primary');
+                    activeBtn.classList.remove('text-slate-400');
+                    const activeIcon = activeBtn.querySelector('.material-symbols-outlined');
+                    if (activeIcon) activeIcon.classList.add('fill-1');
                 }
             } else {
                 nav.classList.add('translate-y-[200%]');
@@ -1083,37 +1097,47 @@
             if (tokenParam) {
                 token = tokenParam;
                 localStorage.setItem('conference_token', token);
+                // URL cleanup
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
 
             if (!token) {
+                console.log("No token found, showing login...");
                 setTimeout(() => {
-                    document.getElementById('splash-loading').style.display = 'none';
+                    document.getElementById('splash-loading').classList.add('hidden');
                     document.getElementById('login-container').style.display = 'block';
-                }, 1000);
+                    document.getElementById('screen-login').classList.add('active');
+                }, 1500);
                 return;
             }
 
             try {
-                const res = await fetch(`${API_BASE}/me`, { headers: { 'Authorization': `Bearer ${token}` } });
-                if (!res.ok) throw new Error('Token inválido');
-                const user = await res.json();
-                currentUser = user;
+                const res = await fetch(`${API_BASE}/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
 
-                // Set avatars
-                if (user.picture_url) {
-                    document.getElementById('user-avatar').src = user.picture_url;
-                    document.getElementById('settings-avatar').src = user.picture_url;
+                if (!res.ok) throw new Error('Token inválido o expirado');
+
+                const data = await res.json();
+                currentUser = data.user;
+
+                // Sync UI with user data
+                if (currentUser.avatar_url || currentUser.picture_url) {
+                    const avatar = currentUser.avatar_url || currentUser.picture_url;
+                    document.getElementById('user-avatar').src = avatar;
+                    document.getElementById('settings-avatar').src = avatar;
                 }
-                document.getElementById('settings-name').textContent = user.name;
-                document.getElementById('settings-email').textContent = user.email;
+                document.getElementById('settings-name').textContent = currentUser.name;
+                document.getElementById('settings-email').textContent = currentUser.email;
 
+                console.log("Auth successful for:", currentUser.email);
                 showScreen('meetings');
                 loadMeetings();
             } catch (err) {
+                console.error("Auth error:", err);
                 localStorage.removeItem('conference_token');
                 token = null;
-                document.getElementById('splash-loading').style.display = 'none';
+                document.getElementById('splash-loading').classList.add('hidden');
                 document.getElementById('login-container').style.display = 'block';
             }
         }
@@ -1138,44 +1162,43 @@
 
                 list.innerHTML = data.reverse().map(m => {
                     // Choose Status UI
-                    let statusHtml = '';
-                    switch (m.status) {
-                        case 'DRAFT':
-                            statusHtml = `<div class="flex items-center gap-2">
-                                <span class="flex h-2 w-2 rounded-full bg-status-gray"></span>
-                                <span class="text-[10px] font-bold text-status-gray uppercase tracking-wider">Sin Audio</span>
-                            </div>`; break;
-                        case 'RECORDING':
-                            statusHtml = `<div class="flex items-center gap-2">
-                                <span class="flex h-2 w-2 rounded-full bg-status-red animate-pulse"></span>
-                                <span class="text-[10px] font-bold text-status-red uppercase tracking-wider">Por enviar</span>
-                            </div>`; break;
-                        case 'PROCESSING':
-                            statusHtml = `<div class="flex items-center gap-2">
-                                <span class="flex h-2 w-2 rounded-full bg-status-orange"></span>
-                                <span class="text-[10px] font-bold text-status-orange uppercase tracking-wider">Procesando</span>
-                            </div>`; break;
-                        case 'FINALIZED':
-                        default:
-                            statusHtml = `<div class="flex items-center gap-2">
-                                <span class="flex h-2 w-2 rounded-full bg-status-green"></span>
-                                <span class="text-[10px] font-bold text-status-green uppercase tracking-wider">Completada</span>
-                            </div>`; break;
+                    let statusClass = 'bg-slate-100 text-slate-500';
+                    let statusLabel = m.status;
+
+                    if (m.status === 'PROCESSING') {
+                        statusClass = 'bg-amber-100 text-amber-600 animate-pulse';
+                        statusLabel = 'Procesando';
+                    } else if (m.status === 'COMPLETED' || m.status === 'READY') {
+                        statusClass = 'bg-emerald-100 text-emerald-600';
+                        statusLabel = 'Listo';
+                    } else if (m.status === 'ERROR') {
+                        statusClass = 'bg-red-100 text-red-600';
+                        statusLabel = 'Error';
                     }
 
                     const dateObj = new Date(m.created_at);
-                    const isToday = dateObj.toDateString() === new Date().toDateString();
-                    const dateStr = isToday ? 'Hoy' : dateObj.toLocaleDateString();
+                    const dateStr = dateObj.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
                     return `
-                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl ios-shadow flex flex-col gap-2 cursor-pointer active:scale-[0.98] transition-all hover:border-primary/30" onclick="openMeetingRouter('${m.id}')">
-                        ${statusHtml}
-                        <h3 class="font-bold text-sm text-slate-900 dark:text-slate-100 truncate pr-2">${m.title}</h3>
-                        <div class="flex justify-between items-center mt-1">
-                             <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                                <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span>${dateStr}</span>
-                             </div>
-                             <span class="material-symbols-outlined text-sm text-slate-300">chevron_right</span>
+                    <div class="glass meeting-card group" onclick="openMeetingRouter('${m.id}')">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="size-10 rounded-xl bg-royal-blue/10 flex items-center justify-center text-royal-blue group-hover:bg-royal-blue group-hover:text-white transition-colors">
+                                <span class="material-symbols-outlined text-xl">mic</span>
+                            </div>
+                            <span class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${statusClass}">
+                                ${statusLabel}
+                            </span>
+                        </div>
+                        <h3 class="font-bold text-lg text-slate-900 dark:text-white mb-2 truncate">${m.title}</h3>
+                        <div class="flex items-center gap-3 text-xs text-slate-500">
+                            <span class="flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">calendar_month</span>
+                                ${dateStr}
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">schedule</span>
+                                ${dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                            </span>
                         </div>
                     </div>`;
                 }).join('');
@@ -1241,32 +1264,21 @@
             document.getElementById('rec-minutes').textContent = '00';
             document.getElementById('rec-seconds').textContent = '00';
 
-            document.getElementById('rec-status-text').textContent = 'Grabadora en Vivo';
-            document.getElementById('rec-meeting-title').textContent = recMeetingId ? 'Lista para grabar' : 'Crear nueva grabación';
+            document.getElementById('rec-status-text').textContent = 'Listo para Grabar';
+            document.getElementById('rec-meeting-title').textContent = recMeetingId ? 'Grabación asignada' : 'Pulsa el círculo para comenzar';
 
-            document.getElementById('rec-hero-icon').textContent = 'mic';
-            document.getElementById('rec-hero-icon').style.fontVariationSettings = "'FILL' 0";
-            document.getElementById('rec-hero-circle').className = 'relative w-[72px] h-[72px] bg-slate-200 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center shadow-lg transition-colors z-10';
-            document.getElementById('rec-hero-pulse').classList.add('hidden');
-            document.getElementById('rec-hero-pulse-2').classList.add('hidden');
+            const recIcon = document.getElementById('rec-icon');
+            recIcon.textContent = 'mic';
+            recIcon.classList.add('fill-1');
+
+            // Waves hidden initially
+            document.querySelectorAll('.recorder-wave').forEach(w => w.style.display = 'none');
 
             document.getElementById('rec-wave-bars').classList.replace('opacity-100', 'opacity-30');
 
             document.getElementById('rec-controls-active').classList.remove('hidden');
             document.getElementById('rec-controls-finished').classList.add('hidden');
 
-            // Reset record button to initial "stop" structure but function as Start? Wait, previous logic used the same 'btn-record-main' to start AND stop.
-            // On start it was changing the icon. Now we have two buttons in the layout.
-            // Let's ensure btn-record-main acts as STOP when recording, and "START" when not recording?
-            // Wait, the requested UI has 'Pausar' and 'Detener' already. So maybe we should just change it to 'Grabar' when not recording?
-            const btnMain = document.getElementById('btn-record-main');
-            btnMain.innerHTML = `
-                <div class="w-7 h-7 rounded-full bg-white text-red-500 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">fiber_manual_record</span>
-                </div>
-                <span class="text-[13px]">Grabar</span>
-            `;
-            btnMain.className = 'flex-1 flex flex-col items-center justify-center gap-2 rounded-3xl bg-red-500 text-white font-bold shadow-lg shadow-red-500/20 hover:bg-red-600 active:scale-95 transition-all border-none outline-none';
             document.getElementById('btn-pause-record').classList.add('opacity-50', 'cursor-not-allowed');
         }
 
@@ -1321,10 +1333,10 @@
                 clearInterval(recInterval);
 
                 document.getElementById('rec-status-text').textContent = 'Grabación Detenida';
-                document.getElementById('rec-hero-icon').textContent = 'check';
-                document.getElementById('rec-hero-circle').className = 'relative w-[72px] h-[72px] bg-primary text-white rounded-full flex items-center justify-center shadow-lg transition-colors z-10';
-                document.getElementById('rec-hero-pulse').classList.add('hidden');
-                document.getElementById('rec-hero-pulse-2').classList.add('hidden');
+                const recIcon = document.getElementById('rec-icon');
+                recIcon.textContent = 'check_circle';
+
+                document.querySelectorAll('.recorder-wave').forEach(w => w.style.display = 'none');
                 document.getElementById('rec-wave-bars').classList.replace('opacity-100', 'opacity-30');
 
                 document.getElementById('rec-controls-active').classList.add('hidden');
@@ -1368,10 +1380,10 @@
 
                 // UI update TO RECORDING
                 document.getElementById('rec-status-text').textContent = 'Grabando...';
-                document.getElementById('rec-hero-icon').style.fontVariationSettings = "'FILL' 1";
-                document.getElementById('rec-hero-circle').className = 'relative w-[72px] h-[72px] bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg z-10';
-                document.getElementById('rec-hero-pulse').classList.remove('hidden');
-                document.getElementById('rec-hero-pulse-2').classList.remove('hidden');
+                const recIcon = document.getElementById('rec-icon');
+                recIcon.textContent = 'stop';
+
+                document.querySelectorAll('.recorder-wave').forEach(w => w.style.display = 'block');
                 document.getElementById('rec-wave-bars').classList.replace('opacity-30', 'opacity-100');
 
                 document.getElementById('btn-pause-record').classList.remove('opacity-50', 'cursor-not-allowed');
