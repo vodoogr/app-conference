@@ -6,9 +6,14 @@ const { supabase } = require('./supabase');
 const { generateMinutes } = require('./ai');
 const { getAuthUrl, getTokens, uploadToDrive } = require('./drive');
 
+const path = require('path');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_super_seguro';
+
+// Serve frontend during local development
+app.use(express.static(path.join(__dirname, '../public')));
 
 // 1. Configuración de CORS con soporte para Redes Privadas (PNA)
 app.use(cors({
@@ -167,4 +172,8 @@ v1.post('/minutes/:minutes_id/export', verifyToken, async (req, res) => {
 
 app.use('/v1', v1);
 
-app.listen(PORT, () => console.log(`Backend en puerto ${PORT}`));
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`Backend en puerto ${PORT}`));
+}
+
+module.exports = app;
