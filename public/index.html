@@ -378,13 +378,14 @@
                         </div>
                         <span class="text-[13px]">Pausar</span>
                     </button>
-                    <button id="btn-record-main"
+                    <button id="btn-record-bottom"
                         class="flex-1 flex flex-col items-center justify-center gap-2 rounded-3xl bg-red-500 text-white font-bold shadow-lg shadow-red-500/20 hover:bg-red-600 active:scale-95 transition-all border-none outline-none">
                         <div class="w-7 h-7 rounded-full bg-white text-red-500 flex items-center justify-center">
                             <span class="material-symbols-outlined text-[14px]"
+                                id="rec-icon-bottom"
                                 style="font-variation-settings: 'FILL' 1;">stop</span>
                         </div>
-                        <span class="text-[13px]">Detener</span>
+                        <span class="text-[13px]" id="rec-text-bottom">Detener</span>
                     </button>
                 </div>
                 <!-- File Upload Access -->
@@ -1268,8 +1269,21 @@
             document.getElementById('rec-meeting-title').textContent = recMeetingId ? 'Grabación asignada' : 'Pulsa el círculo para comenzar';
 
             const recIcon = document.getElementById('rec-icon');
-            recIcon.textContent = 'mic';
-            recIcon.classList.add('fill-1');
+            if (recIcon) {
+                recIcon.textContent = 'mic';
+                recIcon.classList.add('fill-1');
+            }
+
+            // Sync bottom button
+            const btnBottom = document.getElementById('btn-record-bottom');
+            const recTextBottom = document.getElementById('rec-text-bottom');
+            const recIconBottom = document.getElementById('rec-icon-bottom');
+            if (btnBottom) {
+                btnBottom.classList.remove('bg-red-600');
+                btnBottom.classList.add('bg-primary');
+                if (recTextBottom) recTextBottom.textContent = 'Grabar';
+                if (recIconBottom) recIconBottom.textContent = 'fiber_manual_record';
+            }
 
             // Waves hidden initially
             document.querySelectorAll('.recorder-wave').forEach(w => w.style.display = 'none');
@@ -1314,8 +1328,7 @@
                 mediaRecorder.resume();
                 isPaused = false;
                 document.getElementById('rec-status-text').textContent = 'Grabando...';
-                document.getElementById('rec-hero-pulse').classList.remove('hidden');
-                document.getElementById('rec-hero-pulse-2').classList.remove('hidden');
+                document.querySelectorAll('.recorder-wave').forEach(w => w.style.display = 'block');
                 document.getElementById('rec-wave-bars').classList.replace('opacity-30', 'opacity-100');
                 btn.innerHTML = `
                     <div class="w-7 h-7 rounded-full bg-slate-700 dark:bg-slate-400 text-white dark:text-slate-900 flex items-center justify-center">
@@ -1326,7 +1339,7 @@
             }
         });
 
-        document.getElementById('btn-record-main').addEventListener('click', async () => {
+        async function toggleRecording() {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 // STOP recording
                 mediaRecorder.stop();
@@ -1334,7 +1347,7 @@
 
                 document.getElementById('rec-status-text').textContent = 'Grabación Detenida';
                 const recIcon = document.getElementById('rec-icon');
-                recIcon.textContent = 'check_circle';
+                if (recIcon) recIcon.textContent = 'check_circle';
 
                 document.querySelectorAll('.recorder-wave').forEach(w => w.style.display = 'none');
                 document.getElementById('rec-wave-bars').classList.replace('opacity-100', 'opacity-30');
@@ -1348,7 +1361,6 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-                // Compatibility check for mimeTypes (important for Safari/iOS)
                 const mimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/aac'];
                 let chosenMime = '';
                 for (const mime of mimeTypes) {
@@ -1358,7 +1370,6 @@
                     }
                 }
 
-                console.log("Chosen MimeType:", chosenMime);
                 mediaRecorder = new MediaRecorder(stream, chosenMime ? { mimeType: chosenMime } : {});
                 audioChunks = [];
 
@@ -1381,26 +1392,34 @@
                 // UI update TO RECORDING
                 document.getElementById('rec-status-text').textContent = 'Grabando...';
                 const recIcon = document.getElementById('rec-icon');
-                recIcon.textContent = 'stop';
-
+                if (recIcon) {
+                    recIcon.textContent = 'stop';
+                    recIcon.classList.add('fill-1');
+                }
+                
                 document.querySelectorAll('.recorder-wave').forEach(w => w.style.display = 'block');
                 document.getElementById('rec-wave-bars').classList.replace('opacity-30', 'opacity-100');
 
                 document.getElementById('btn-pause-record').classList.remove('opacity-50', 'cursor-not-allowed');
 
-                const btnM = document.getElementById('btn-record-main');
-                btnM.innerHTML = `
-                <div class="w-7 h-7 rounded-full bg-white text-red-500 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">stop</span>
-                </div>
-                <span class="text-[13px]">Detener</span>
-                `;
-                btnM.className = 'flex-1 flex flex-col items-center justify-center gap-2 rounded-3xl bg-red-500 text-white font-bold shadow-lg shadow-red-500/20 hover:bg-red-600 active:scale-95 transition-all border-none outline-none';
+                // Sync bottom button
+                const btnBottom = document.getElementById('btn-record-bottom');
+                const recTextBottom = document.getElementById('rec-text-bottom');
+                const recIconBottom = document.getElementById('rec-icon-bottom');
+                if (btnBottom) {
+                    btnBottom.classList.replace('bg-red-500', 'bg-royal-blue');
+                    if (recTextBottom) recTextBottom.textContent = 'Detener';
+                    if (recIconBottom) recIconBottom.textContent = 'stop';
+                }
 
             } catch (err) {
                 alert('No se pudo acceder al micrófono: ' + err.message);
             }
-        });
+        }
+
+        document.getElementById('btn-record-main').addEventListener('click', toggleRecording);
+        const btnRecBottom = document.getElementById('btn-record-bottom');
+        if (btnRecBottom) btnRecBottom.addEventListener('click', toggleRecording);
 
         const fileInput = document.getElementById('audio-file-input');
         const btnTriggerFile = document.getElementById('btn-trigger-file');
