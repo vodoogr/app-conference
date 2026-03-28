@@ -961,20 +961,8 @@
     <!-- Global Layout Wrapper Ends -->
 
     <script>
-        // Detect current environment to set API_BASE
-        const isProd = window.location.hostname !== 'localhost';
-        const defaultApi = isProd
-            ? 'https://conferenceapp-api-x3lku7o7ra-ew.a.run.app/v1'
-            : 'http://localhost:3000/v1';
-
-        // MIGRATION: If the saved API is the old wrong one or empty, force defaultApi
-        let savedApi = localStorage.getItem('conference_api_base');
-        if (savedApi && (savedApi.includes('355486498745') || savedApi === '')) {
-            localStorage.removeItem('conference_api_base');
-            savedApi = null;
-        }
-
-        const API_BASE = savedApi || defaultApi;
+        // Automatic API detection: always use the current server's /v1 endpoint
+        const API_BASE = window.location.origin + '/v1';
         console.log("Using API_BASE:", API_BASE);
         let token = localStorage.getItem('conference_token');
         let currentUser = null;
@@ -1080,7 +1068,7 @@
         // ══════════════════════════════════════
         document.getElementById('btn-login-google').addEventListener('click', () => {
             document.getElementById('btn-login-google').innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span>Conectando...';
-            window.location.href = `${API_BASE}/auth/login`;
+            window.location.href = `${API_BASE}/auth/google`;
         });
 
         document.getElementById('btn-logout').addEventListener('click', () => {
