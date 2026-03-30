@@ -472,7 +472,7 @@
                         <div class="flex flex-col pt-1">
                             <h3 class="text-slate-900 dark:text-slate-100 text-sm font-bold tracking-tight"
                                 id="step-1-title">Iniciando subida</h3>
-                            <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Enviando datos al servidor</p>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5" id="step-1-subtitle">Enviando datos al servidor</p>
                         </div>
                     </div>
 
@@ -483,7 +483,7 @@
                             <span class="material-symbols-outlined text-[16px]">graphic_eq</span>
                         </div>
                         <div class="flex flex-col pt-1">
-                            <h3 class="text-slate-900 dark:text-slate-100 text-sm font-bold tracking-tight">
+                            <h3 class="text-slate-900 dark:text-slate-100 text-sm font-bold tracking-tight" id="step-2-title">
                                 Transcribiendo audio</h3>
                             <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5" id="step-2-subtitle">Pendiente
                             </p>
@@ -497,7 +497,7 @@
                             <span class="material-symbols-outlined text-[16px]">description</span>
                         </div>
                         <div class="flex flex-col pt-1">
-                            <h3 class="text-slate-900 dark:text-slate-100 text-sm font-bold tracking-tight">Generando
+                            <h3 class="text-slate-900 dark:text-slate-100 text-sm font-bold tracking-tight" id="step-3-title">Generando
                                 acta</h3>
                             <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5" id="step-3-subtitle">Pendiente
                             </p>
@@ -511,7 +511,7 @@
                             <span class="material-symbols-outlined text-[16px]">check_circle</span>
                         </div>
                         <div class="flex flex-col pt-1">
-                            <h3 class="text-slate-900 dark:text-slate-100 text-sm font-bold tracking-tight">Exportación
+                            <h3 class="text-slate-900 dark:text-slate-100 text-sm font-bold tracking-tight" id="step-4-title">Exportación
                                 lista</h3>
                             <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5" id="step-4-subtitle">Pendiente
                             </p>
@@ -961,8 +961,8 @@
     <!-- Global Layout Wrapper Ends -->
 
     <script>
-        // Automatic API detection: always use the current server's /v1 endpoint
-        const API_BASE = window.location.origin + '/v1';
+        // Automatic API detection with localStorage override
+        const API_BASE = localStorage.getItem('conference_api_base') || (window.location.origin + '/v1');
         console.log("Using API_BASE:", API_BASE);
         let token = localStorage.getItem('conference_token');
         let currentUser = null;
@@ -972,7 +972,8 @@
         // ══════════════════════════════════════
         function showScreen(screenId) {
             console.log("Switching to screen:", screenId);
-            document.querySelectorAll('.screen').forEach(s => {
+            const screens = document.querySelectorAll('.screen');
+            screens.forEach(s => {
                 s.classList.remove('active');
                 s.classList.add('hidden');
             });
@@ -980,34 +981,45 @@
             if (target) {
                 target.classList.remove('hidden');
                 target.classList.add('active');
+            } else {
+                console.warn("Screen not found:", screenId);
             }
             window.scrollTo(0, 0);
 
+            // Screen-specific setup
+            if (screenId === 'dev-settings') {
+                const apiInput = document.getElementById('dev-api-url');
+                if (apiInput) {
+                    apiInput.value = localStorage.getItem('conference_api_base') || API_BASE;
+                }
+            }
+
             // Premium Navigation Logic
             const nav = document.getElementById('global-bottom-nav');
-            const mainScreens = ['meetings', 'recording', 'settings'];
+            if (nav) {
+                const mainScreens = ['meetings', 'recording', 'settings'];
+                if (mainScreens.includes(screenId) || screenId === 'meeting-detail') {
+                    nav.classList.remove('translate-y-[200%]');
+                    // Reset nav items
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        const icon = btn.querySelector('.material-symbols-outlined');
+                        btn.classList.remove('text-primary');
+                        btn.classList.add('text-slate-400');
+                        if (icon) icon.classList.remove('fill-1');
+                    });
 
-            if (mainScreens.includes(screenId) || screenId === 'meeting-detail') {
-                nav.classList.remove('translate-y-[200%]');
-                // Reset nav items
-                document.querySelectorAll('.nav-btn').forEach(btn => {
-                    const icon = btn.querySelector('.material-symbols-outlined');
-                    btn.classList.remove('text-primary');
-                    btn.classList.add('text-slate-400');
-                    if (icon) icon.classList.remove('fill-1');
-                });
-
-                // Set active item
-                let activeId = screenId === 'meeting-detail' ? 'meetings' : screenId;
-                const activeBtn = document.querySelector(`.nav-btn[data-target="screen-${activeId}"]`);
-                if (activeBtn) {
-                    activeBtn.classList.add('text-primary');
-                    activeBtn.classList.remove('text-slate-400');
-                    const activeIcon = activeBtn.querySelector('.material-symbols-outlined');
-                    if (activeIcon) activeIcon.classList.add('fill-1');
+                    // Set active item
+                    let activeId = screenId === 'meeting-detail' ? 'meetings' : screenId;
+                    const activeBtn = document.querySelector(`.nav-btn[data-target="screen-${activeId}"]`);
+                    if (activeBtn) {
+                        activeBtn.classList.add('text-primary');
+                        activeBtn.classList.remove('text-slate-400');
+                        const activeIcon = activeBtn.querySelector('.material-symbols-outlined');
+                        if (activeIcon) activeIcon.classList.add('fill-1');
+                    }
+                } else {
+                    nav.classList.add('translate-y-[200%]');
                 }
-            } else {
-                nav.classList.add('translate-y-[200%]');
             }
         }
 
@@ -1140,16 +1152,16 @@
                 const res = await fetch(`${API_BASE}/meetings`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const data = await res.json();
 
-                if (!data || data.length === 0) {
+                if (!data || !Array.isArray(data) || data.length === 0) {
                     list.innerHTML = `<div class="text-center mt-20 text-slate-400">
                         <span class="material-symbols-outlined text-4xl mb-2 opacity-50">inbox</span>
-                        <p>No tienes reuniones guardadas.</p>
+                        <p>${Array.isArray(data) ? 'No tienes reuniones guardadas.' : 'Error al cargar reuniones.'}</p>
                         <p class="text-xs mt-1">Usa el botón + para crear una.</p>
                     </div>`;
                     return;
                 }
 
-                list.innerHTML = data.reverse().map(m => {
+                list.innerHTML = data.slice().reverse().map(m => {
                     // Choose Status UI
                     let statusClass = 'bg-slate-100 text-slate-500';
                     let statusLabel = m.status;
@@ -1220,8 +1232,9 @@
             try {
                 const res = await fetch(`${API_BASE}/meetings/${meetingId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const meeting = await res.json();
-
-                if (!meeting.audio_drive_file_id) {
+                if (meeting.error_code) throw new Error(meeting.error_message);
+                
+                if (!meeting.audio_drive_file_id && meeting.status !== 'READY') {
                     openLiveRecording(meetingId, meeting.title);
                 } else {
                     openMeetingDetail(meetingId, meeting);
@@ -1469,8 +1482,8 @@
             const titleEl = document.getElementById(`step-${stepNum}-title`);
             const subtitleEl = document.getElementById(`step-${stepNum}-subtitle`);
 
-            if (title) titleEl.textContent = title;
-            if (subtitle) subtitleEl.textContent = subtitle;
+            if (title && titleEl) titleEl.textContent = title;
+            if (subtitle && subtitleEl) subtitleEl.textContent = subtitle;
 
             if (state === 'active') {
                 step.classList.replace('opacity-50', 'opacity-100');
@@ -1609,27 +1622,49 @@
             // Default select Acta tab
             document.querySelector('.detail-tab[data-tab="acta"]').click();
 
-            // Load Minutes
-            try {
-                const resM = await fetch(`${API_BASE}/minutes/${meetingId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                if (resM.ok) {
-                    const minData = await resM.json();
+            // Load Minutes (from passed object if available)
+            if (meetingData.minutes) {
+                const minData = Array.isArray(meetingData.minutes) ? meetingData.minutes[0] : meetingData.minutes;
+                if (minData && minData.content_md) {
                     document.getElementById('btn-generate-acta-container').classList.add('hidden');
                     document.getElementById('acta-content-wrapper').classList.remove('hidden');
                     document.getElementById('acta-content').value = minData.content_md || '';
                 } else {
-                    // No minutes exist yet
                     document.getElementById('acta-content-wrapper').classList.add('hidden');
                     document.getElementById('btn-generate-acta-container').classList.remove('hidden');
                 }
-            } catch (err) { console.error('Error cargando acta', err); }
+            } else {
+                // Try fetching directly just in case
+                try {
+                    const resM = await fetch(`${API_BASE}/minutes/${meetingId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (resM.ok) {
+                        const minData = await resM.json();
+                        document.getElementById('btn-generate-acta-container').classList.add('hidden');
+                        document.getElementById('acta-content-wrapper').classList.remove('hidden');
+                        document.getElementById('acta-content').value = minData.content_md || '';
+                    } else {
+                        document.getElementById('acta-content-wrapper').classList.add('hidden');
+                        document.getElementById('btn-generate-acta-container').classList.remove('hidden');
+                    }
+                } catch (err) { 
+                    document.getElementById('acta-content-wrapper').classList.add('hidden');
+                    document.getElementById('btn-generate-acta-container').classList.remove('hidden');
+                }
+            }
 
-            // Load Transcript
-            try {
-                const transRes = await fetch(`${API_BASE}/meetings/${meetingId}/transcript`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const transData = await transRes.json();
-                renderTranscriptDetail(transData.segments);
-            } catch (err) { }
+            // Load Transcript (from passed object if available)
+            if (meetingData.transcript) {
+                const transData = Array.isArray(meetingData.transcript) ? meetingData.transcript[0] : meetingData.transcript;
+                if (transData && transData.content_json) {
+                    renderTranscriptDetail(transData.content_json.segments);
+                }
+            } else {
+                try {
+                    const transRes = await fetch(`${API_BASE}/meetings/${meetingId}/transcript`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    const transData = await transRes.json();
+                    renderTranscriptDetail(transData.segments);
+                } catch (err) { }
+            }
         }
 
         document.getElementById('btn-generate-acta').addEventListener('click', async () => {
@@ -1641,6 +1676,7 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const minData = await res.json();
+                if (minData.error_code) throw new Error(minData.error_message);
                 document.getElementById('btn-generate-acta-container').classList.add('hidden');
                 document.getElementById('acta-content-wrapper').classList.remove('hidden');
                 // The mock endpoint returns { minutes: { content_md : "..." } }

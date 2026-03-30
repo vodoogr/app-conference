@@ -1,7 +1,7 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 /**
  * Genera el acta de una reunión basada en su transcripción.
@@ -29,13 +29,46 @@ async function generateMinutes(transcript, style = 'neutral') {
 }
 
 /**
- * (Opcional/Futuro) Transcribe audio a texto. 
- * Nota: Requiere enviar el audio en formato compatible o usar la API de File de Google.
+ * Transcribe audio a texto usando Gemini 1.5 (Multimodal).
+ * @param {Buffer} audioBuffer - Datos del audio.
+ * @param {string} mimeType - Tipo de MIME (audio/webm, audio/wav, etc.).
  */
-async function transcribeAudio(audioBuffer, mimeType) {
-  // Por ahora mantenemos la estructura para cuando implementemos la subida real.
-  // Gemini 1.5 permite enviar audios directamente.
-  return "Transcripción simulada (implementando flujo de audio...)";
+async function transcribeAudio(audioBuffer, mimeType = "audio/webm") {
+  try {
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          mimeType: mimeType,
+          data: audioBuffer.toString("base64")
+        }
+      },
+      "Transcribe exactamente lo que se dice en este audio. Devuelve solo el texto de la transcripción."
+    ]);
+    return result.response.text();
+  } catch (error) {
+    console.error("Error al transcribir con Gemini:", error);
+    return "Error en la transcripción automática de Gemini.";
+  }
 }
 
-module.exports = { generateMinutes, transcribeAudio };
+/**
+ * Responde preguntas sobre una reunión basándose en su transcripción.
+ * @param {string} prompt - La pregunta del usuario.
+ * @param {string} transcript - Texto de la transcripción. 
+ */
+async function queryAboutMeeting(prompt, transcript) {
+    const systemPrompt = `
+      Eres un asistente IA para reuniones. Responde preguntas basadas en la siguiente transcripción:
+      ${transcript}
+      
+      Pregunta: ${prompt}
+    `;
+    try {
+      const result = await model.generateContent(systemPrompt);
+      return result.response.text();
+    } catch (error) {
+      return "Hubo un problema consultando al asistente IA.";
+    }
+}
+
+module.exports = { generateMinutes, transcribeAudio, queryAboutMeeting };
